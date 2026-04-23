@@ -3,3 +3,4 @@ sqlmodel
 ultralytics
 faiss-cpu
 insightface
+uvicorn
