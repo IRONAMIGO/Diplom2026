@@ -1,6 +1,17 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-app = FastAPI()
+from core.database import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Создание БД и таблиц
+    init_db()
+    yield
+    # Выполняется после завершения
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
