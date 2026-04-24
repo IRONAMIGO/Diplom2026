@@ -4,3 +4,4 @@ ultralytics
 faiss-cpu
 insightface
 uvicorn
+python-multipart
