@@ -60,6 +60,7 @@ class StudentCreate(StudentBase):
 class StudentUpdate(BaseModel):
     name: str | None = None
     group_id: int | None = None
+    phone_number: str | None = None
 
 class StudentPublic(StudentBase):
     id: int
