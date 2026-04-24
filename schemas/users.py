@@ -15,7 +15,7 @@ class User(SQLModel, table=True):
     role_id: int | None = Field(foreign_key="role.id", ondelete="SET NULL")
     student_id: int | None = Field(default=None, foreign_key="student.id", ondelete="SET NULL")
     group_id: int | None = Field(default=None, foreign_key="group.id", ondelete="SET NULL")
-    stream_id: int = Field(default=None, foreign_key="stream.id", ondelete="SET NULL")
+    stream_id: int | None = Field(default=None, foreign_key="stream.id", ondelete="SET NULL")
 
     role: "Role" = Relationship(back_populates="users")
     student: Optional["Student"] = Relationship(back_populates="user")
