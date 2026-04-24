@@ -14,6 +14,7 @@ class Stream(SQLModel, table=True):
     name: str = Field(index=True)
 
     groups: list["Group"] = Relationship(back_populates="stream", cascade_delete=True)
+    user: Optional["User"] = Relationship(back_populates="stream")
 
 
 class GroupBase(SQLModel):
