@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from api.references import references_router
 from core.database import init_db
 from api.students import students_router, groups_router, streams_router
 
@@ -17,7 +18,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(streams_router)
 app.include_router(groups_router)
 app.include_router(students_router)
-
+app.include_router(references_router)
 
 @app.get("/")
 async def root():

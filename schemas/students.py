@@ -8,12 +8,11 @@ if TYPE_CHECKING:
     from .users import User
 
 
-# TODO StreamBase, StreamCreate, StreamUpdate, StreamPublic, StreamWithGroups, StreamWithGroupsAndStudents
 class StreamBase(SQLModel):
     name: str = Field(index=True)
 
 
-class Stream(SQLModel, table=True):
+class Stream(StreamBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     groups: list["Group"] = Relationship(back_populates="stream", cascade_delete=True)
