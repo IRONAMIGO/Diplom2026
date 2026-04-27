@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, status
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Depends, Query, status, Form
 from sqlmodel import Session, select
 
 from core.database import get_session
@@ -21,7 +23,10 @@ async def read_streams(
     return streams
 
 @streams_router.post("/", response_model=StreamPublic, status_code=status.HTTP_201_CREATED)
-async def create_stream(*, session: Session = Depends(get_session), stream: StreamCreate):
+async def create_stream(
+        *, session: Session = Depends(get_session),
+        stream: Annotated[StreamCreate, Form()]
+):
     """
     Создать группу:
     - **name** - имя группы;
@@ -43,7 +48,9 @@ async def read_stream(*, session: Session = Depends(get_session), stream_id: int
 
 @streams_router.put("/{stream_id}", response_model=StreamPublic)
 async def update_stream(
-        *, session: Session = Depends(get_session), stream_id: int, stream: StreamUpdate
+        *, session: Session = Depends(get_session),
+        stream_id: int,
+        stream: Annotated[StreamUpdate, Form()]
 ):
     db_stream = session.get(Stream, stream_id)
     if not db_stream:
@@ -80,7 +87,10 @@ async def read_groups(
     return groups
 
 @groups_router.post("/", response_model=GroupPublic, status_code=status.HTTP_201_CREATED)
-async def create_group(*, session: Session = Depends(get_session), group: GroupCreate):
+async def create_group(
+        *, session: Session = Depends(get_session),
+        group: Annotated[GroupCreate, Form()]
+):
     """
     Создать группу:
     - **name** - имя группы;
@@ -102,7 +112,9 @@ async def read_group(*, session: Session = Depends(get_session), group_id: int):
 
 @groups_router.put("/{group_id}", response_model=GroupPublic)
 async def update_group(
-        *, session: Session = Depends(get_session), group_id: int, group: GroupUpdate
+        *, session: Session = Depends(get_session),
+        group_id: int,
+        group: Annotated[GroupUpdate, Form()]
 ):
     db_group = session.get(Group, group_id)
     if not db_group:
@@ -139,7 +151,10 @@ async def read_students(
     return students
 
 @students_router.post("/", response_model=StudentPublic, status_code=status.HTTP_201_CREATED)
-async def create_student(*, session: Session = Depends(get_session), student: StudentCreate):
+async def create_student(
+        *, session: Session = Depends(get_session),
+        student: Annotated[StudentCreate, Form()]
+):
     """
     Создать студента:
     - **name** - имя и фамилия;
@@ -163,7 +178,9 @@ async def read_student(*, session: Session = Depends(get_session), student_id: i
 
 @students_router.put("/{student_id}", response_model=StudentPublic)
 async def update_student(
-        *, session: Session = Depends(get_session), student_id: int, student: StudentUpdate
+        *, session: Session = Depends(get_session),
+        student_id: int,
+        student: Annotated[StudentUpdate, Form()]
 ):
     db_student = session.get(Student, student_id)
     if not db_student:
