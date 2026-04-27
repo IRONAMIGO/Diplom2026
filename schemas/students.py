@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-from pydantic import BaseModel
+
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ class StreamCreate(StreamBase):
     pass
 
 
-class StreamUpdate(BaseModel):
+class StreamUpdate(SQLModel):
     name :str
 
 
@@ -49,7 +49,7 @@ class GroupCreate(GroupBase):
     pass
 
 
-class GroupUpdate(BaseModel):
+class GroupUpdate(SQLModel):
     name: str | None = None
     stream: int | None = None
 
@@ -82,7 +82,7 @@ class StudentCreate(StudentBase):
     pass
 
 
-class StudentUpdate(BaseModel):
+class StudentUpdate(SQLModel):
     name: str | None = None
     group_id: int | None = None
     phone_number: str | None = None
