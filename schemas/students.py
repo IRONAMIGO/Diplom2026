@@ -31,6 +31,7 @@ class StreamPublic(StreamBase):
     id: int
 
 
+# ========== Group Schemas ==========
 class GroupBase(SQLModel):
     name: str = Field(index=True)
     stream_id: int = Field(foreign_key="stream.id", ondelete="CASCADE")
@@ -61,6 +62,7 @@ class GroupPublicWithStudents(GroupPublic):
     students: list["StudentPublic"]
 
 
+# ========== Student Schemas ==========
 class StudentBase(SQLModel):
     name: str = Field(index=True)
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
