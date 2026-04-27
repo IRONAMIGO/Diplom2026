@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
-from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from .references import ReferenceFace

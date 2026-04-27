@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-PHOTO_DIR = os.getenv("PHOTO_DIR", BASE_DIR / "data/photo")
+PHOTO_DIR = Path(os.getenv("PHOTO_DIR", BASE_DIR / "data/photo"))
 
 # База данных
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'data/app.db'}")
