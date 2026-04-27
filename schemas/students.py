@@ -8,12 +8,11 @@ if TYPE_CHECKING:
     from .users import User
 
 
-# TODO StreamBase, StreamCreate, StreamUpdate, StreamPublic, StreamWithGroups, StreamWithGroupsAndStudents
 class StreamBase(SQLModel):
     name: str = Field(index=True)
 
 
-class Stream(SQLModel, table=True):
+class Stream(StreamBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     groups: list["Group"] = Relationship(back_populates="stream", cascade_delete=True)
@@ -32,6 +31,7 @@ class StreamPublic(StreamBase):
     id: int
 
 
+# ========== Group Schemas ==========
 class GroupBase(SQLModel):
     name: str = Field(index=True)
     stream_id: int = Field(foreign_key="stream.id", ondelete="CASCADE")
@@ -62,6 +62,7 @@ class GroupPublicWithStudents(GroupPublic):
     students: list["StudentPublic"]
 
 
+# ========== Student Schemas ==========
 class StudentBase(SQLModel):
     name: str = Field(index=True)
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
