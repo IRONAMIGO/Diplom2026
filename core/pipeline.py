@@ -1,11 +1,10 @@
 import json
-from pathlib import Path
 from typing import List, Tuple
 
 import faiss
 import numpy as np
-from ultralytics import YOLO
 from insightface import model_zoo
+from ultralytics import YOLO
 
 from core.config import YOLO_MODEL_PATH, ARCFACE_MODEL_PATH, DETECTION_CONFIDENCE_THRESHOLD, DETECTION_IOU_THRESHOLD, \
     FAISS_INDEX_PATH, FAISS_ID_MAP_PATH

@@ -5,18 +5,31 @@ import cv2
 import numpy as np
 
 
-def read_image(path: Path) -> np.ndarray:
+def read_image_file(path: Path) -> np.ndarray:
     """Чтение изображения в BGR (OpenCV)."""
-    img = cv2.imread(str(path))
+    img = cv2.imread(path)
     if img is None:
         raise FileNotFoundError(f"Не удалось прочитать изображение: {path}")
     return img
 
 
+def read_image_bytes(img_bytes:  bytes) -> np.ndarray:
+    """Чтение изображения в BGR (OpenCV)."""
+    np_arr = np.frombuffer(img_bytes, np.uint8)
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise ValueError("Не удалось декодировать изображение из байтов")
+    return img
+
+
+def reduce_image(image: np.ndarray, size: int) -> np.ndarray:
+    pass
+
+
 def write_image(path: Path, image: np.ndarray) -> None:
     """Сохранение изображения."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    cv2.imwrite(str(path), image)
+    cv2.imwrite(path, image)
 
 
 def crop_face(image: np.ndarray, bbox: Tuple[float, float, float, float]) -> np.ndarray:

@@ -6,7 +6,16 @@ from sqlmodel import Session, select
 
 from core.config import PHOTO_DIR
 from core.database import get_session
+from core.image_utils import crop_face, read_image_bytes, write_image, reduce_image
+from core.pipeline import FaceRecognitionPipeline
 from schemas.references import ReferenceFacePublic, ReferenceFace
+
+pipeline = None
+def get_pipeline():
+    global pipeline
+    if pipeline is None:
+        pipeline = FaceRecognitionPipeline()
+    return pipeline
 
 references_router = APIRouter(
     prefix="/students",
@@ -27,7 +36,12 @@ async def read_references(
     return references
 
 @references_router.post("/{student_id}/photos/", response_model=ReferenceFacePublic, status_code=status.HTTP_201_CREATED)
-async def create_reference(*, session: Session = Depends(get_session), student_id: int, photo: UploadFile):
+async def create_reference(
+        *, session: Session = Depends(get_session),
+        student_id: int,
+        photo: UploadFile,
+        pipe: FaceRecognitionPipeline = Depends(get_pipeline)
+):
     """
     Создать фото студента:
     - **student_id** - id группы;
@@ -42,15 +56,33 @@ async def create_reference(*, session: Session = Depends(get_session), student_i
     file_path = PHOTO_DIR / file_name
     # Убедимся, что директория для фото существует
     PHOTO_DIR.mkdir(parents=True, exist_ok=True)
-    # Сохраняем загруженный файл на диск
-    with open(file_path, "wb") as buffer:
-        content = await photo.read()
-        buffer.write(content)
 
-    # TODO найти лицо на фото и создать эмбендинг
+    # Загружаем изображение
+    img = read_image_bytes(await photo.read())
+
+    # Детектируем лица
+    boxes = pipe.detector.detect(img)
+    if not boxes:
+        raise ValueError("На изображении не найдено лицо")
+
+    # Берём бокс с максимальной уверенностью
+    best_box = max(boxes, key=lambda b: b[4])
+    x1, y1, x2, y2, _ = best_box
+
+    # Кроп
+    face_crop = crop_face(img, (x1, y1, x2, y2))
+
+    # Извлекаем эмбеддинг
+    embedding = pipe.embedder.extract(face_crop)
+
+    # Уменьшение размеров изображения
+    # img = reduce_image(img, 500)
+
+    # Сохраняем изображение на диске
+    write_image(file_path, img)
 
     # Создаём запись в БД
-    db_reference = ReferenceFace(student_id=student_id, embedding=b'111', image_path=file_path)
+    db_reference = ReferenceFace(student_id=student_id, embedding=embedding, image_path=file_path)
     session.add(db_reference)
     session.commit()
     session.refresh(db_reference)
