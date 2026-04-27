@@ -1,8 +1,10 @@
 import os
+import uuid
 
 from fastapi import APIRouter, Depends, Query, status, UploadFile, HTTPException
 from sqlmodel import Session, select
 
+from core.config import PHOTO_DIR
 from core.database import get_session
 from schemas.references import ReferenceFacePublic, ReferenceFace
 
@@ -33,9 +35,22 @@ async def create_reference(*, session: Session = Depends(get_session), student_i
     """
     if photo.content_type not in ["image/jpeg", "image/png"]:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Invalid file type")
-    # TODO Обработка файла
 
-    db_reference = ReferenceFace(student_id=student_id, embedding=b'111', image_path='path/to/image.jpg')
+    # Генерируем уникальное имя файла
+    file_extension = ".jpg" if photo.content_type == "image/jpeg" else ".png"
+    file_name = f"{uuid.uuid4()}{file_extension}"
+    file_path = PHOTO_DIR / file_name
+    # Убедимся, что директория для фото существует
+    PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+    # Сохраняем загруженный файл на диск
+    with open(file_path, "wb") as buffer:
+        content = await photo.read()
+        buffer.write(content)
+
+    # TODO найти лицо на фото и создать эмбендинг
+
+    # Создаём запись в БД
+    db_reference = ReferenceFace(student_id=student_id, embedding=b'111', image_path=file_path)
     session.add(db_reference)
     session.commit()
     session.refresh(db_reference)
@@ -62,5 +77,5 @@ async def delete_reference(*, session: Session = Depends(get_session), student_i
         os.remove(f'{reference.image_path}')
     session.delete(reference)
     session.commit()
-    # TODO Удалить файл и перестроить faiss индекс
+    # TODO Перестроить faiss индекс
     return {"ok": True}
