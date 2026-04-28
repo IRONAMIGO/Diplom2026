@@ -19,7 +19,7 @@ class RecognitionData(RecognitionDataBase, table=True):
 
 
 class RecognitionDataCreate(RecognitionDataBase):
-    pass
+    image_path: None = None
 
 
 class RecognitionDataUpdate(SQLModel):

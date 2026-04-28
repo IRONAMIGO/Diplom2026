@@ -3,7 +3,11 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Путь сохранения эталонных фото
 PHOTO_DIR = Path(os.getenv("PHOTO_DIR", BASE_DIR / "data/photo"))
+# Путь сохранения эталонных фото
+REPORT_DIR = Path(os.getenv("PHOTO_DIR", BASE_DIR / "data/reports"))
 
 # База данных
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'data/app.db'}")
