@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Tuple
 
 import cv2
 import numpy as np
@@ -22,8 +21,20 @@ def read_image_bytes(img_bytes:  bytes) -> np.ndarray:
     return img
 
 
-def reduce_image(image: np.ndarray, size: int) -> np.ndarray:
-    pass
+def reduce_image(image: np.ndarray, limit: int) -> np.ndarray:
+    """Уменьшает изображение с сохранением пропорций так, чтобы ширина и высота не превышали limit."""
+
+    h, w = image.shape[:2]
+    if h <= limit and w <= limit:
+        return image
+    # Коэффициент масштабирования, чтобы большая сторона стала равна limit
+    scale = limit / max(h, w)
+    # Вычисляем новые размеры с округлением до ближайшего целого
+    new_h = int(round(h * scale))
+    new_w = int(round(w * scale))
+    # Уменьшаем изображение с помощью интерполяции INTER_AREA (оптимально для уменьшения)
+    resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    return resized
 
 
 def write_image(path: Path, image: np.ndarray) -> None:
@@ -32,7 +43,7 @@ def write_image(path: Path, image: np.ndarray) -> None:
     cv2.imwrite(path, image)
 
 
-def crop_face(image: np.ndarray, bbox: Tuple[float, float, float, float]) -> np.ndarray:
+def crop_face(image: np.ndarray, bbox: tuple[float, float, float, float]) -> np.ndarray:
     """Вырезать область лица."""
     x1, y1, x2, y2 = [int(v) for v in bbox]
     h, w = image.shape[:2]

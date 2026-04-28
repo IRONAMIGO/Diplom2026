@@ -1,13 +1,17 @@
 import json
 from typing import List, Tuple
 
+import cv2
 import faiss
 import numpy as np
 from insightface import model_zoo
 from ultralytics import YOLO
 
 from core.config import YOLO_MODEL_PATH, ARCFACE_MODEL_PATH, DETECTION_CONFIDENCE_THRESHOLD, DETECTION_IOU_THRESHOLD, \
-    FAISS_INDEX_PATH, FAISS_ID_MAP_PATH
+    FAISS_INDEX_PATH, FAISS_ID_MAP_PATH, RECOGNITION_THRESHOLD
+from core.database import get_session
+from core.image_utils import crop_face, read_image_file
+from schemas.reports import RecognitionResultCreate, RecognitionData
 
 
 class FaceRecognitionPipeline:
@@ -16,6 +20,46 @@ class FaceRecognitionPipeline:
         self.embedder = FaceEmbedder()
         self.index = FaissIndex()
         self.index.load()  # загружаем сохранённый индекс
+
+    def recognize_group_image(self, data_id: int, image: np.ndarray = None) -> List[RecognitionResultCreate]:
+        """
+        Обрабатывает групповое фото, распознаёт лица и сохраняет результаты в БД.
+        Возвращает список объектов RecognitionResult.
+        """
+        if image is None:
+            with next(get_session()) as session:
+                data = session.get(RecognitionData, data_id)
+                image =  read_image_file(data.image_path)
+        boxes = self.detector.detect(image)
+
+        results = []
+        for (x1, y1, x2, y2, det_conf) in boxes:
+            face_crop = crop_face(image, (x1, y1, x2, y2))
+            emb = self.embedder.extract(face_crop)
+
+            # Поиск ближайшего соседа
+            distances, indices = self.index.search(emb, k=1)
+            student_id = None
+            similarity = None
+            if len(distances) > 0 and distances[0] >= RECOGNITION_THRESHOLD:
+                # distances для IP = cosine similarity
+                similarity = float(distances[0])
+                # Получить student_id из БД по индексу faiss (который является database_id)
+                student_id = self.index.index_to_id.get(int(indices[0]))
+
+            result = RecognitionResultCreate(
+                data_id=data_id,
+                student_id=student_id,
+                bbox_x1=x1,
+                bbox_y1=y1,
+                bbox_x2=x2,
+                bbox_y2=y2,
+                confidence=det_conf,
+                similarity=similarity
+            )
+            results.append(result)
+
+        return results
 
 
 class FaceDetector:

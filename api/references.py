@@ -75,8 +75,8 @@ async def create_reference(
     # Извлекаем эмбеддинг
     embedding = pipe.embedder.extract(face_crop)
 
-    # Уменьшение размеров изображения
-    # img = reduce_image(img, 500)
+    # Уменьшение размеров изображения (после извлечения всех необходимых данных)
+    img = reduce_image(img, 300)
 
     # Сохраняем изображение на диске
     write_image(file_path, img)

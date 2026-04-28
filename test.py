@@ -1,5 +1,4 @@
-from core.config import BASE_DIR, TEST_VAR
+from core.config import BASE_DIR
 
 if __name__ == '__main__':
     print(BASE_DIR)
-    print(TEST_VAR)

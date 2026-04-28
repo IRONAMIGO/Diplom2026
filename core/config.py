@@ -19,3 +19,6 @@ DETECTION_IOU_THRESHOLD = float(os.getenv("DETECTION_IOU_THRESHOLD", "0.45"))
 # Faiss индекс
 FAISS_INDEX_PATH = Path(os.getenv("FAISS_INDEX_PATH", BASE_DIR / "data/faiss_index.bin"))
 FAISS_ID_MAP_PATH = Path(os.getenv("FAISS_ID_MAP_PATH", BASE_DIR / "data/faiss_id_map.json"))
+
+# Параметры распознавания
+RECOGNITION_THRESHOLD = float(os.getenv("RECOGNITION_THRESHOLD", "0.6"))

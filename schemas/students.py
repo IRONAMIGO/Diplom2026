@@ -1,13 +1,15 @@
 from typing import TYPE_CHECKING, Optional
 
-
 from sqlmodel import Field, Relationship, SQLModel
 
+
 if TYPE_CHECKING:
-    from .references import ReferenceFace
+    from .references import ReferenceFace, ReferenceFacePublic
     from .users import User
+    from .reports import RecognitionResult, RecognitionResultPublic
 
 
+# <editor-fold desc="Stream Schemas">
 class StreamBase(SQLModel):
     name: str = Field(index=True)
 
@@ -24,14 +26,15 @@ class StreamCreate(StreamBase):
 
 
 class StreamUpdate(SQLModel):
-    name :str
+    pass
 
 
 class StreamPublic(StreamBase):
     id: int
+# </editor-fold>
 
 
-# ========== Group Schemas ==========
+# <editor-fold desc="Group Schemas">
 class GroupBase(SQLModel):
     name: str = Field(index=True)
     stream_id: int = Field(foreign_key="stream.id", ondelete="CASCADE")
@@ -60,9 +63,10 @@ class GroupPublic(GroupBase):
 
 class GroupPublicWithStudents(GroupPublic):
     students: list["StudentPublic"]
+# </editor-fold>
 
 
-# ========== Student Schemas ==========
+# <editor-fold desc="Student Schemas">
 class StudentBase(SQLModel):
     name: str = Field(index=True)
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
@@ -75,6 +79,7 @@ class Student(StudentBase, table=True):
 
     group: "Group" = Relationship(back_populates="students")
     references: list["ReferenceFace"] = Relationship(back_populates="student", cascade_delete=True)
+    results: list["RecognitionResult"] = Relationship(back_populates="student", cascade_delete=True)
     user: Optional["User"] = Relationship(back_populates="student")
 
 
@@ -98,4 +103,9 @@ class StudentPublicWithGroup(StudentPublic):
 
 
 class StudentPublicWithGroupAndReferences(StudentPublicWithGroup):
-    references: list["ReferenceFace"]
+    references: list["ReferenceFacePublic"]
+
+
+class StudentPublicWithGroupAndResults(StudentPublicWithGroup):
+    results: list["RecognitionResultPublic"]
+# </editor-fold>

@@ -7,6 +7,8 @@ from core.database import get_session
 from schemas.students import StudentUpdate, StudentPublic, Student, StudentCreate, GroupPublic, Group, GroupCreate, \
     GroupUpdate, Stream, StreamUpdate, StreamPublic, StreamCreate
 
+
+# <editor-fold desc="streams_router">
 streams_router = APIRouter(
     prefix="/streams",
     tags=["streams"],
@@ -72,11 +74,14 @@ async def delete_stream(*, session: Session = Depends(get_session), stream_id: i
     stream = session.get(Stream, stream_id)
     if not stream:
         raise HTTPException(status_code=404, detail="Stream not found")
+    # TODO При удалении потока удаляются группы, студенты, референсы. Предусмотреть удаление файлов эталонных фото.
     session.delete(stream)
     session.commit()
     return {"ok": True}
+# </editor-fold>
 
 
+# <editor-fold desc="groups_router">
 groups_router = APIRouter(
     prefix="/groups",
     tags=["groups"],
@@ -142,11 +147,14 @@ async def delete_group(*, session: Session = Depends(get_session), group_id: int
     group = session.get(Group, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
+    # TODO При удалении группы удаляются студенты, референсы. Предусмотреть удаление файлов эталонных фото.
     session.delete(group)
     session.commit()
     return {"ok": True}
+# </editor-fold>
 
 
+# <editor-fold desc="students_router">
 students_router = APIRouter(
     prefix="/students",
     tags=["students"],
@@ -214,6 +222,8 @@ async def delete_student(*, session: Session = Depends(get_session), student_id:
     student = session.get(Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    # TODO При удалении студента удаляются референсы. Предусмотреть удаление файлов эталонных фото.
     session.delete(student)
     session.commit()
     return {"ok": True}
+# </editor-fold>
