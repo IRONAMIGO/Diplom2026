@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
-
 if TYPE_CHECKING:
     from .references import ReferenceFace, ReferenceFacePublic
     from .users import User
@@ -79,7 +78,7 @@ class Student(StudentBase, table=True):
 
     group: "Group" = Relationship(back_populates="students")
     references: list["ReferenceFace"] = Relationship(back_populates="student", cascade_delete=True)
-    results: list["RecognitionResult"] = Relationship(back_populates="student", cascade_delete=True)
+    results: list["RecognitionResult"] = Relationship(back_populates="student")
     user: Optional["User"] = Relationship(back_populates="student")
 
 

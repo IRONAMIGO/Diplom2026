@@ -6,10 +6,11 @@ from sqlmodel import SQLModel, Field, Relationship
 if TYPE_CHECKING:
     from .students import Student
 
+
 class RecognitionDataBase(SQLModel):
     lecture_date: date = Field(default_factory=date.today)
-    lecture_num: int = Field()      # номер в расписании
-    image_path: str = Field()       # путь к сохранённому изображению
+    lecture_num: int = Field()  # номер в расписании
+    image_path: str = Field()  # путь к сохранённому изображению
 
 
 class RecognitionData(RecognitionDataBase, table=True):
@@ -43,10 +44,11 @@ class RecognitionResultBase(SQLModel):
 
 class RecognitionResult(RecognitionResultBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    student_id: int | None = Field(default=None, index=True)  # None если не распознан
+    student_id: int | None = Field(default=None, index=True, foreign_key="student.id",
+                                   ondelete="SET NULL")  # None если не распознан
 
     data: "RecognitionData" = Relationship(back_populates="results")
-    students: list["Student"] = Relationship(back_populates="results")
+    student: "Student" = Relationship(back_populates="results")
 
 
 class RecognitionResultCreate(RecognitionResultBase):
