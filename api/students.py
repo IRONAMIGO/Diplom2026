@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Depends, Query, status, Form
+from fastapi import APIRouter, HTTPException, Depends, Query, status, Form, Path
 from sqlmodel import Session, select
 
 from core.database import get_session
@@ -45,7 +45,10 @@ async def create_stream(
 
 @streams_router.get("/{stream_id}",
                     response_model=StreamPublic, )
-async def read_stream(*, session: Session = Depends(get_session), stream_id: int):
+async def read_stream(
+        *, session: Session = Depends(get_session),
+        stream_id: Annotated[int, Path(title="ID потока для получения")]
+):
     stream = session.get(Stream, stream_id)
     if not stream:
         raise HTTPException(status_code=404, detail="Stream not found")
@@ -55,7 +58,7 @@ async def read_stream(*, session: Session = Depends(get_session), stream_id: int
 @streams_router.put("/{stream_id}", response_model=StreamPublic)
 async def update_stream(
         *, session: Session = Depends(get_session),
-        stream_id: int,
+        stream_id: Annotated[int, Path(title="ID потока для изменения")],
         stream: Annotated[StreamUpdate, Form()]
 ):
     db_stream = session.get(Stream, stream_id)
@@ -70,7 +73,10 @@ async def update_stream(
 
 
 @streams_router.delete("/{stream_id}")
-async def delete_stream(*, session: Session = Depends(get_session), stream_id: int):
+async def delete_stream(
+        *, session: Session = Depends(get_session),
+        stream_id: Annotated[int, Path(title="ID потока для удаления")]
+):
     stream = session.get(Stream, stream_id)
     if not stream:
         raise HTTPException(status_code=404, detail="Stream not found")
@@ -118,7 +124,10 @@ async def create_group(
 
 @groups_router.get("/{group_id}",
                    response_model=GroupPublic, )
-async def read_group(*, session: Session = Depends(get_session), group_id: int):
+async def read_group(
+        *, session: Session = Depends(get_session),
+        group_id: Annotated[int, Path(title="ID группы для получения")]
+):
     group = session.get(Group, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -128,7 +137,7 @@ async def read_group(*, session: Session = Depends(get_session), group_id: int):
 @groups_router.put("/{group_id}", response_model=GroupPublic)
 async def update_group(
         *, session: Session = Depends(get_session),
-        group_id: int,
+        group_id: Annotated[int, Path(title="ID группы для изменения")],
         group: Annotated[GroupUpdate, Form()]
 ):
     db_group = session.get(Group, group_id)
@@ -143,7 +152,10 @@ async def update_group(
 
 
 @groups_router.delete("/{group_id}")
-async def delete_group(*, session: Session = Depends(get_session), group_id: int):
+async def delete_group(
+        *, session: Session = Depends(get_session),
+        group_id: Annotated[int, Path(title="ID группы для удаления")]
+):
     group = session.get(Group, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -165,8 +177,8 @@ students_router = APIRouter(
 async def read_students(
         *,
         session: Session = Depends(get_session),
-        offset: int = 0,
-        limit: int = Query(default=100, le=100),
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(le=20)] = 20
 ):
     students = session.exec(select(Student).offset(offset).limit(limit)).all()
     return students
@@ -193,7 +205,10 @@ async def create_student(
 
 @students_router.get("/{student_id}",
                      response_model=StudentPublic, )
-async def read_student(*, session: Session = Depends(get_session), student_id: int):
+async def read_student(
+        *, session: Session = Depends(get_session),
+        student_id: Annotated[int, Path(title="ID студента для получения")]
+):
     student = session.get(Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -203,7 +218,7 @@ async def read_student(*, session: Session = Depends(get_session), student_id: i
 @students_router.put("/{student_id}", response_model=StudentPublic)
 async def update_student(
         *, session: Session = Depends(get_session),
-        student_id: int,
+        student_id: Annotated[int, Path(title="ID студента для изменения")],
         student: Annotated[StudentUpdate, Form()]
 ):
     db_student = session.get(Student, student_id)
@@ -218,7 +233,10 @@ async def update_student(
 
 
 @students_router.delete("/{student_id}")
-async def delete_student(*, session: Session = Depends(get_session), student_id: int):
+async def delete_student(
+        *, session: Session = Depends(get_session),
+        student_id: Annotated[int, Path(title="ID студента для удаления")]
+):
     student = session.get(Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")

@@ -1,7 +1,8 @@
 import os
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status, UploadFile, HTTPException
+from fastapi import APIRouter, Depends, Query, status, UploadFile, HTTPException, Path
 from sqlmodel import Session, select
 
 from core.config import PHOTO_DIR, PHOTO_MAX_SIZE
@@ -30,9 +31,9 @@ references_router = APIRouter(
 async def read_references(
         *,
         session: Session = Depends(get_session),
-        student_id: int,
-        offset: int = 0,
-        limit: int = Query(default=20, le=20),
+        student_id: Annotated[int, Path(title="ID студента для получения фотографий")],
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(le=20)] = 20
 ):
     references = session.exec(
         select(ReferenceFace).where(ReferenceFace.student_id == student_id).offset(offset).limit(limit)
@@ -44,7 +45,7 @@ async def read_references(
                         status_code=status.HTTP_201_CREATED)
 async def create_reference(
         *, session: Session = Depends(get_session),
-        student_id: int,
+        student_id: Annotated[int, Path(title="ID студента для добавления фотографии")],
         photo: UploadFile,
         pipe: FaceRecognitionPipeline = Depends(get_pipeline)
 ):
@@ -97,7 +98,11 @@ async def create_reference(
 
 @references_router.get("/{student_id}/photos/{photo_id}",
                        response_model=ReferenceFacePublic, )
-async def read_reference(*, session: Session = Depends(get_session), student_id: int, photo_id: int):
+async def read_reference(
+        *, session: Session = Depends(get_session),
+        student_id: Annotated[int, Path(title="ID студента для получения фотографии")],
+        photo_id: Annotated[int, Path(title="ID фотографии для получения")]
+):
     # TODO Проверка прав на действия
     reference = session.get(ReferenceFace, photo_id)
     if not reference:
@@ -106,7 +111,11 @@ async def read_reference(*, session: Session = Depends(get_session), student_id:
 
 
 @references_router.delete("/{student_id}/photos/{photo_id}")
-async def delete_reference(*, session: Session = Depends(get_session), student_id: int, photo_id: int):
+async def delete_reference(
+        *, session: Session = Depends(get_session),
+        student_id: Annotated[int, Path(title="ID студента для удаления фотографии")],
+        photo_id: Annotated[int, Path(title="ID фотографии для удаления")]
+):
     # TODO Проверить права пользователя на удаление
     reference = session.get(ReferenceFace, photo_id)
     if not reference:

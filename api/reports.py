@@ -29,8 +29,8 @@ reports_router = APIRouter(
 async def read_results(
         *,
         session: Session = Depends(get_session),
-        offset: int = 0,
-        limit: int = Query(default=10, le=10),
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(le=20)] = 20
 ):
     results = session.exec(select(RecognitionResult).offset(offset).limit(limit)).all()
     return results
