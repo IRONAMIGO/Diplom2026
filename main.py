@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.references import references_router
 from api.reports import reports_router
 from api.students import students_router, groups_router, streams_router
+from core.config import CORS_URL
 from core.database import init_db
 from core.pipeline import FaceRecognitionPipeline
 
@@ -32,7 +33,7 @@ app.include_router(reports_router)
 # Разрешаем доступ с определенных доменов
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://example.com", "http://localhost:5173"],  # Разрешенные источники
+    allow_origins=[CORS_URL, "http://localhost:5173"],  # Разрешенные источники
     allow_credentials=True,
     allow_methods=["GET", "POST"],  # Разрешенные методы
     allow_headers=["*"],  # Разрешенные заголовки

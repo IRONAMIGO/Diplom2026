@@ -4,12 +4,15 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# CORS URL фронтэнда
+CORS_URL = os.getenv("CORS_URL", "http://localhost:5173")
+
 # Путь сохранения эталонных фото
 PHOTO_DIR = Path(os.getenv("PHOTO_DIR", BASE_DIR / "data/photo"))
 # Максимальный размер эталонных фото
 PHOTO_MAX_SIZE = 300
 # Путь сохранения распознанных фото
-REPORT_DIR = Path(os.getenv("PHOTO_DIR", BASE_DIR / "data/reports"))
+REPORT_DIR = Path(os.getenv("REPORT_DIR", BASE_DIR / "data/reports"))
 # Максимальный размер распознанных фото
 REPORT_MAX_SIZE = 400
 
