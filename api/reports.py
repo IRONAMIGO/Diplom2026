@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 
 from core.config import REPORT_DIR, REPORT_MAX_SIZE
 from core.database import get_session
@@ -11,6 +11,7 @@ from core.pipeline import FaceRecognitionPipeline
 from schemas.references import ReferenceFace
 from schemas.reports import RecognitionResultPublic, RecognitionResult, RecognitionDataCreate, RecognitionData, \
     RecognitionDataPublic
+from schemas.students import Group, Student
 
 pipeline = None
 def get_pipeline():
@@ -29,10 +30,21 @@ reports_router = APIRouter(
 async def read_results(
         *,
         session: Session = Depends(get_session),
+        stream_id: Annotated[int | None, Query()] = None,
+        group_id: Annotated[int | None, Query()] = None,
+        student_id: Annotated[int | None, Query()] = None,
         offset: Annotated[int, Query(ge=0)] = 0,
         limit: Annotated[int, Query(le=20)] = 20
 ):
-    results = session.exec(select(RecognitionResult).offset(offset).limit(limit)).all()
+    statement = select(RecognitionResult)
+    if student_id:
+        statement = statement.where(RecognitionResult.student_id == student_id)
+    elif group_id:
+        statement = statement.join(Student).where(Student.group_id == group_id)
+    elif stream_id:
+        statement = statement.join(Student).join(Group).where(Group.stream_id == stream_id)
+    statement = statement.order_by(col(RecognitionResult.data_id).desc()).offset(offset).limit(limit)
+    results = session.exec(statement).all()
     return results
 
 
@@ -46,7 +58,7 @@ async def create_results(
     """
     Отправить групповое фото на распознавание:
     - **lecture_date** - дата;
-    - **lecture_num** - номер в рассписании;
+    - **lecture_num** - номер в расписании;
     - **photo** - файл с фотографией;
     """
     if photo.content_type not in ["image/jpeg", "image/png"]:
