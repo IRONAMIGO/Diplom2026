@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.references import references_router
 from api.reports import reports_router
@@ -27,6 +28,15 @@ app.include_router(groups_router)
 app.include_router(students_router)
 app.include_router(references_router)
 app.include_router(reports_router)
+
+# Разрешаем доступ с определенных доменов
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://example.com", "http://localhost:5173"],  # Разрешенные источники
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],  # Разрешенные методы
+    allow_headers=["*"],  # Разрешенные заголовки
+)
 
 
 @app.get("/")
