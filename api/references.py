@@ -4,23 +4,27 @@ import uuid
 from fastapi import APIRouter, Depends, Query, status, UploadFile, HTTPException
 from sqlmodel import Session, select
 
-from core.config import PHOTO_DIR
+from core.config import PHOTO_DIR, PHOTO_MAX_SIZE
 from core.database import get_session
 from core.image_utils import crop_face, read_image_bytes, write_image, reduce_image
 from core.pipeline import FaceRecognitionPipeline
 from schemas.references import ReferenceFacePublic, ReferenceFace
 
 pipeline = None
+
+
 def get_pipeline():
     global pipeline
     if pipeline is None:
         pipeline = FaceRecognitionPipeline()
     return pipeline
 
+
 references_router = APIRouter(
     prefix="/students",
     tags=["references"],
 )
+
 
 @references_router.get("/{student_id}/photos/", response_model=list[ReferenceFacePublic])
 async def read_references(
@@ -35,7 +39,9 @@ async def read_references(
     ).all()
     return references
 
-@references_router.post("/{student_id}/photos/", response_model=ReferenceFacePublic, status_code=status.HTTP_201_CREATED)
+
+@references_router.post("/{student_id}/photos/", response_model=ReferenceFacePublic,
+                        status_code=status.HTTP_201_CREATED)
 async def create_reference(
         *, session: Session = Depends(get_session),
         student_id: int,
@@ -76,10 +82,10 @@ async def create_reference(
     embedding = pipe.embedder.extract(face_crop)
 
     # Уменьшение размеров изображения (после извлечения всех необходимых данных)
-    img = reduce_image(img, 300)
+    img_small, _ = reduce_image(img, PHOTO_MAX_SIZE)
 
     # Сохраняем изображение на диске
-    write_image(file_path, img)
+    write_image(file_path, img_small)
 
     # Создаём запись в БД
     db_reference = ReferenceFace(student_id=student_id, embedding=embedding, image_path=file_path)

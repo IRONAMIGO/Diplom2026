@@ -21,12 +21,12 @@ def read_image_bytes(img_bytes:  bytes) -> np.ndarray:
     return img
 
 
-def reduce_image(image: np.ndarray, limit: int) -> np.ndarray:
+def reduce_image(image: np.ndarray, limit: int) -> tuple[np.ndarray, float]:
     """Уменьшает изображение с сохранением пропорций так, чтобы ширина и высота не превышали limit."""
 
     h, w = image.shape[:2]
     if h <= limit and w <= limit:
-        return image
+        return image, 1
     # Коэффициент масштабирования, чтобы большая сторона стала равна limit
     scale = limit / max(h, w)
     # Вычисляем новые размеры с округлением до ближайшего целого
@@ -34,7 +34,7 @@ def reduce_image(image: np.ndarray, limit: int) -> np.ndarray:
     new_w = int(round(w * scale))
     # Уменьшаем изображение с помощью интерполяции INTER_AREA (оптимально для уменьшения)
     resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
-    return resized
+    return resized, scale
 
 
 def write_image(path: Path, image: np.ndarray) -> None:

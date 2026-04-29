@@ -21,9 +21,9 @@ class FaceRecognitionPipeline:
         self.index = FaissIndex()
         self.index.load()  # загружаем сохранённый индекс
 
-    def recognize_group_image(self, data_id: int, image: np.ndarray = None) -> List[RecognitionResultCreate]:
+    def recognize_group_image(self, data_id: int, image: np.ndarray = None, scale=1.0) -> List[RecognitionResultCreate]:
         """
-        Обрабатывает групповое фото, распознаёт лица и сохраняет результаты в БД.
+        Обрабатывает групповое фото, распознаёт лица.
         Возвращает список объектов RecognitionResult.
         """
         if image is None:
@@ -39,21 +39,21 @@ class FaceRecognitionPipeline:
 
             # Поиск ближайшего соседа
             distances, indices = self.index.search(emb, k=1)
-            student_id = None
+            reference_id = None
             similarity = None
             if len(distances) > 0 and distances[0] >= RECOGNITION_THRESHOLD:
                 # distances для IP = cosine similarity
                 similarity = float(distances[0])
-                # Получить student_id из БД по индексу faiss (который является database_id)
-                student_id = self.index.index_to_id.get(int(indices[0]))
+                # Получить reference_id по индексу faiss (который является database_id)
+                reference_id = self.index.index_to_id.get(int(indices[0]))
 
             result = RecognitionResultCreate(
                 data_id=data_id,
-                student_id=student_id,
-                bbox_x1=x1,
-                bbox_y1=y1,
-                bbox_x2=x2,
-                bbox_y2=y2,
+                reference_id=reference_id,
+                bbox_x1=x1*scale,
+                bbox_y1=y1*scale,
+                bbox_x2=x2*scale,
+                bbox_y2=y2*scale,
                 confidence=det_conf,
                 similarity=similarity
             )

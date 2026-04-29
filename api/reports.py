@@ -4,10 +4,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException
 from sqlmodel import Session, select
 
-from core.config import REPORT_DIR
+from core.config import REPORT_DIR, REPORT_MAX_SIZE
 from core.database import get_session
 from core.image_utils import read_image_bytes, reduce_image, write_image
 from core.pipeline import FaceRecognitionPipeline
+from schemas.references import ReferenceFace
 from schemas.reports import RecognitionResultPublic, RecognitionResult, RecognitionDataCreate, RecognitionData, \
     RecognitionDataPublic
 
@@ -35,8 +36,8 @@ async def read_results(
     return results
 
 
-@reports_router.post("/", response_model=list[RecognitionResultPublic], status_code=status.HTTP_201_CREATED)
-async def create_student(
+@reports_router.post("/recognize", response_model=list[RecognitionResultPublic], status_code=status.HTTP_201_CREATED)
+async def create_results(
         *, session: Session = Depends(get_session),
         data: Annotated[RecognitionDataCreate, Form()],
         photo: UploadFile,
@@ -61,7 +62,7 @@ async def create_student(
     # Загружаем изображение
     img = read_image_bytes(await photo.read())
     # Уменьшенное изображение для сохранения
-    img_small = reduce_image(img, 300)
+    img_small, scale = reduce_image(img, REPORT_MAX_SIZE)
     # Сохраняем изображение на диске
     write_image(file_path, img_small)
 
@@ -74,7 +75,19 @@ async def create_student(
     db_data = RecognitionDataPublic.model_validate(db_data)
 
     # Определяем присутствующих на фото
-    results = pipe.recognize_group_image(db_data.id, img)
+    results = pipe.recognize_group_image(db_data.id, img, scale)
     if not results:
         raise ValueError("На изображении не найдено лиц")
-    # TODO записать результаты в БД и вернуть список результатов
+    db_results = []
+    for result in results:
+        db_result = RecognitionResult.model_validate(result)
+        student_id = None
+        ref = session.get(ReferenceFace, result.reference_id)
+        if ref:
+            student_id = ref.student_id
+        db_result.student_id = student_id
+        session.add(db_result)
+        session.commit()
+        session.refresh(db_result)
+        db_results.append(db_result)
+    return db_results

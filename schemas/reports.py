@@ -33,7 +33,6 @@ class RecognitionDataPublic(RecognitionDataBase):
 
 class RecognitionResultBase(SQLModel):
     data_id: int = Field(foreign_key="recognitiondata.id", ondelete="CASCADE")
-    student_id: int | None = Field(default=None, index=True)  # null если не распознан
     bbox_x1: float = Field()
     bbox_y1: float = Field()
     bbox_x2: float = Field()
@@ -44,13 +43,14 @@ class RecognitionResultBase(SQLModel):
 
 class RecognitionResult(RecognitionResultBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
+    student_id: int | None = Field(default=None, index=True)  # None если не распознан
 
     data: "RecognitionData" = Relationship(back_populates="results")
     students: list["Student"] = Relationship(back_populates="results")
 
 
 class RecognitionResultCreate(RecognitionResultBase):
-    pass
+    reference_id: int | None
 
 
 class RecognitionResultUpdate(SQLModel):
@@ -60,6 +60,7 @@ class RecognitionResultUpdate(SQLModel):
 
 class RecognitionResultPublic(RecognitionResultBase):
     id: int
+    student_id: int | None
 
 
 class RecognitionResultPublicWithStudents(RecognitionResultPublic):
