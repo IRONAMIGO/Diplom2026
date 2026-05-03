@@ -5,8 +5,7 @@ from sqlmodel import Session, select
 
 from core.database import get_session
 from schemas.students import StudentUpdate, StudentPublic, Student, StudentCreate, GroupPublic, Group, GroupCreate, \
-    GroupUpdate, Stream, StreamUpdate, StreamPublic, StreamCreate
-
+    GroupUpdate, Stream, StreamUpdate, StreamPublic, StreamCreate, StudentPublicWithGroup
 
 # <editor-fold desc="streams_router">
 streams_router = APIRouter(
@@ -173,7 +172,7 @@ students_router = APIRouter(
 )
 
 
-@students_router.get("/", response_model=list[StudentPublic])
+@students_router.get("/", response_model=list[StudentPublicWithGroup])
 async def read_students(
         *,
         session: Session = Depends(get_session),

@@ -89,7 +89,7 @@ async def create_reference(
     write_image(file_path, img_small)
 
     # Создаём запись в БД
-    db_reference = ReferenceFace(student_id=student_id, embedding=embedding, image_path=file_path)
+    db_reference = ReferenceFace(student_id=student_id, embedding=embedding, image_path=str(file_path))
     session.add(db_reference)
     session.commit()
     session.refresh(db_reference)

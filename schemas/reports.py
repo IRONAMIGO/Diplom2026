@@ -10,17 +10,17 @@ if TYPE_CHECKING:
 class RecognitionDataBase(SQLModel):
     lecture_date: date = Field(default_factory=date.today)
     lecture_num: int = Field()  # номер в расписании
-    image_path: str = Field()  # путь к сохранённому изображению
 
 
 class RecognitionData(RecognitionDataBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
+    image_path: str = Field()  # путь к сохранённому изображению
 
     results: list["RecognitionResult"] = Relationship(back_populates="data", cascade_delete=True)
 
 
 class RecognitionDataCreate(RecognitionDataBase):
-    image_path: None = None
+    pass
 
 
 class RecognitionDataUpdate(SQLModel):
@@ -30,6 +30,7 @@ class RecognitionDataUpdate(SQLModel):
 
 class RecognitionDataPublic(RecognitionDataBase):
     id: int
+    image_path: str
 
 
 class RecognitionResultBase(SQLModel):
