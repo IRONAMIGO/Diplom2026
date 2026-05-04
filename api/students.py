@@ -97,10 +97,14 @@ groups_router = APIRouter(
 async def read_groups(
         *,
         session: Session = Depends(get_session),
+        stream_id: Annotated[int | None, Query()] = None,
         offset: int = 0,
         limit: int = Query(default=10, le=10),
 ):
-    groups = session.exec(select(Group).offset(offset).limit(limit)).all()
+    statement = select(Group)
+    if stream_id:
+        statement = statement.where(Group.stream_id == stream_id)
+    groups = session.exec(statement.offset(offset).limit(limit)).all()
     return groups
 
 
@@ -176,10 +180,14 @@ students_router = APIRouter(
 async def read_students(
         *,
         session: Session = Depends(get_session),
+        group_id: Annotated[int | None, Query()] = None,
         offset: Annotated[int, Query(ge=0)] = 0,
         limit: Annotated[int, Query(le=20)] = 20
 ):
-    students = session.exec(select(Student).offset(offset).limit(limit)).all()
+    statement = select(Student)
+    if group_id:
+        statement = statement.where(Student.group_id == group_id)
+    students = session.exec(statement.offset(offset).limit(limit)).all()
     return students
 
 
