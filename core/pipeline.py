@@ -1,7 +1,6 @@
 import json
 from typing import List, Tuple
 
-import cv2
 import faiss
 import numpy as np
 from insightface import model_zoo
@@ -111,22 +110,15 @@ class FaissIndex:
         self.index_path = FAISS_INDEX_PATH
         self.id_map_path = FAISS_ID_MAP_PATH
 
-    def add(self, ids: List[int], embeddings: np.ndarray) -> None:
-        if embeddings.shape[0] != len(ids):
-            raise ValueError("Количество ID не совпадает с количеством эмбеддингов")
-        # Убедимся, что эмбеддинги нормализованы (для IP)
-        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        embeddings = embeddings / norms
-
-        for db_id, emb in zip(ids, embeddings):
-            if db_id in self.id_to_index:
-                # Обновление существующего? В данной реализации удалим и добавим заново
-                self.remove([db_id])
-            pos = self.next_position
-            self.index.add(emb.reshape(1, -1))
-            self.id_to_index[db_id] = pos
-            self.index_to_id[pos] = db_id
-            self.next_position += 1
+    def add(self, db_id: int, embedding: np.ndarray) -> None:
+        if db_id in self.id_to_index:
+            # Обновление существующего? В данной реализации удалим и добавим заново
+            self.remove([db_id])
+        pos = self.next_position
+        self.index.add(embedding.reshape(1, -1))
+        self.id_to_index[db_id] = pos
+        self.index_to_id[pos] = db_id
+        self.next_position += 1
 
     def remove(self, ids: List[int]) -> None:
         # Faiss не поддерживает удаление напрямую в простом индексе.
@@ -178,7 +170,7 @@ class FaissIndex:
 
     def load(self) -> None:
         if self.index_path.exists():
-            self.index = faiss.read_index(self.index_path)
+            self.index = faiss.read_index(str(self.index_path))
             with open(self.id_map_path, "r") as f:
                 map_data = json.load(f)
             self.id_to_index = {int(k): v for k, v in map_data["id_to_index"].items()}

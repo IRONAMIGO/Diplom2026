@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status, UploadFile, HTTPException, Path
 from sqlmodel import Session, select
 
-from core.config import PHOTO_DIR, PHOTO_MAX_SIZE
+from core.config import PHOTO_DIR, PHOTO_MAX_SIZE, FAISS_INDEX_PATH
 from core.database import get_session
 from core.image_utils import crop_face, read_image_bytes, write_image, reduce_image
 from core.pipeline import FaceRecognitionPipeline
@@ -93,6 +93,9 @@ async def create_reference(
     session.add(db_reference)
     session.commit()
     session.refresh(db_reference)
+    # Добавляем в Faiss индекс
+    pipe.index.add(db_reference.id, db_reference.embedding)
+    pipe.index.save(str(FAISS_INDEX_PATH))
     return db_reference
 
 

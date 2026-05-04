@@ -14,7 +14,7 @@ PHOTO_MAX_SIZE = 300
 # Путь сохранения распознанных фото
 REPORT_DIR = Path(os.getenv("REPORT_DIR", BASE_DIR / "data/reports"))
 # Максимальный размер распознанных фото
-REPORT_MAX_SIZE = 400
+REPORT_MAX_SIZE = 800
 
 # База данных
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'data/app.db'}")
