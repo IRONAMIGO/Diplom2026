@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Depends, Query, status, Form, Path
-from sqlmodel import Session, select
+from fastapi import APIRouter, HTTPException, Depends, Query, status, Form, Path, Response
+from sqlmodel import Session, select, func
 
 from core.database import get_session
 from schemas.students import StudentUpdate, StudentPublic, Student, StudentCreate, GroupPublic, Group, GroupCreate, \
@@ -17,10 +17,15 @@ streams_router = APIRouter(
 @streams_router.get("/", response_model=list[StreamPublic])
 async def read_streams(
         *,
+        response: Response,
         session: Session = Depends(get_session),
         offset: int = 0,
         limit: int = Query(default=10, le=10),
 ):
+    # Подсчёт общего количества
+    total = session.exec(select(func.count()).select_from(Stream)).one()
+    response.headers["X-Total-Count"] = str(total)
+
     streams = session.exec(select(Stream).offset(offset).limit(limit)).all()
     return streams
 
@@ -96,15 +101,23 @@ groups_router = APIRouter(
 @groups_router.get("/", response_model=list[GroupPublic])
 async def read_groups(
         *,
+        response: Response,
         session: Session = Depends(get_session),
         stream_id: Annotated[int | None, Query()] = None,
         offset: int = 0,
         limit: int = Query(default=10, le=10),
 ):
-    statement = select(Group)
+
+    # Формируем базовый запрос
+    base_stmt = select(Group)
+    # Подсчёт количества
+    count_stmt = select(func.count()).select_from(Group)
     if stream_id:
-        statement = statement.where(Group.stream_id == stream_id)
-    groups = session.exec(statement.offset(offset).limit(limit)).all()
+        base_stmt = base_stmt.where(Group.stream_id == stream_id)
+        count_stmt = count_stmt.where(Group.stream_id == stream_id)
+    total = session.exec(count_stmt).one()
+    response.headers["X-Total-Count"] = str(total)
+    groups = session.exec(base_stmt.offset(offset).limit(limit)).all()
     return groups
 
 
@@ -179,15 +192,22 @@ students_router = APIRouter(
 @students_router.get("/", response_model=list[StudentPublicWithGroup])
 async def read_students(
         *,
+        response: Response,
         session: Session = Depends(get_session),
         group_id: Annotated[int | None, Query()] = None,
         offset: Annotated[int, Query(ge=0)] = 0,
         limit: Annotated[int, Query(le=20)] = 20
 ):
-    statement = select(Student)
+    # Базовый запрос с фильтром
+    base_stmt = select(Student)
+    # Подсчёт количества
+    count_stmt = select(func.count()).select_from(Student)
     if group_id:
-        statement = statement.where(Student.group_id == group_id)
-    students = session.exec(statement.offset(offset).limit(limit)).all()
+        base_stmt = base_stmt.where(Student.group_id == group_id)
+        count_stmt = count_stmt.where(Student.group_id == group_id)
+    total = session.exec(count_stmt).one()
+    response.headers["X-Total-Count"] = str(total)
+    students = session.exec(base_stmt.offset(offset).limit(limit)).all()
     return students
 
 
