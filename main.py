@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.references import references_router
 from api.reports import reports_router
@@ -40,3 +41,5 @@ app.include_router(groups_router)
 app.include_router(students_router)
 app.include_router(references_router)
 app.include_router(reports_router)
+
+app.mount("/data", StaticFiles(directory="data"), name="data")

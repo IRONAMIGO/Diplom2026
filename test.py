@@ -5,7 +5,7 @@ import uuid
 import cv2
 from sqlmodel import select
 
-from core.config import BASE_DIR, REPORT_DIR, PHOTO_DIR, PHOTO_MAX_SIZE, REPORT_MAX_SIZE, FAISS_INDEX_PATH
+from core.config import REPORT_DIR, PHOTO_DIR, PHOTO_MAX_SIZE, REPORT_MAX_SIZE, FAISS_INDEX_PATH, BASE_DIR
 from core.database import init_db, get_session
 from core.image_utils import crop_face, reduce_image, write_image
 from core.pipeline import FaceRecognitionPipeline
@@ -13,7 +13,7 @@ from schemas.references import ReferenceFace
 from schemas.students import Stream, Group, Student
 
 if __name__ == '__main__':
-    print("BASE_DIR = ", BASE_DIR)
+    print("PHOTO_DIR = ", PHOTO_DIR)
 
     # Инициализация БД
     init_db()
@@ -50,6 +50,8 @@ if __name__ == '__main__':
             file_path = PHOTO_DIR / file_name
             # Убедимся, что директория для фото существует
             PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+            # Относительный путь от BASE_DIR (для хранения в БД)
+            file_db_path = "/" + str(file_path.relative_to(BASE_DIR)).replace("\\","/")
             # Загружаем изображение
             img = cv2.imread(img_name)
             # Детектируем лица
@@ -69,7 +71,7 @@ if __name__ == '__main__':
             write_image(file_path, img_small)
             # Создаём запись в БД
             with next(get_session()) as session:
-                db_reference = ReferenceFace(student_id=curr_student.id, embedding=embedding, image_path=str(file_path))
+                db_reference = ReferenceFace(student_id=curr_student.id, embedding=embedding, image_path=str(file_db_path))
                 session.add(db_reference)
                 session.commit()
                 session.refresh(db_reference)
