@@ -73,8 +73,8 @@ class GroupPublicWithStream(GroupPublic):
 class StudentBase(SQLModel):
     name: str = Field(index=True)
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
-    phone_number: str | None = Field()
-    email: str | None = Field()
+    phone_number: str | None = Field(default=None)
+    email: str | None = Field(default=None)
 
 
 class Student(StudentBase, table=True):
