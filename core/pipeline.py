@@ -38,17 +38,17 @@ class FaceRecognitionPipeline:
 
             # Поиск ближайшего соседа
             distances, indices = self.index.search(emb, k=1)
-            reference_id = None
+            reference_db_id = None
             similarity = None
             if len(distances) > 0 and distances[0] >= RECOGNITION_THRESHOLD:
                 # distances для IP = cosine similarity
                 similarity = float(distances[0])
                 # Получить reference_id по индексу faiss (который является database_id)
-                reference_id = self.index.index_to_id.get(int(indices[0]))
+                reference_db_id = self.index.index_to_id.get(int(indices[0]))
 
             result = RecognitionResultCreate(
                 data_id=data_id,
-                reference_id=reference_id,
+                reference_db_id=reference_db_id,
                 bbox_x1=x1*scale,
                 bbox_y1=y1*scale,
                 bbox_x2=x2*scale,

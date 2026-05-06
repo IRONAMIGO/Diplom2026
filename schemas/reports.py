@@ -53,7 +53,7 @@ class RecognitionResult(RecognitionResultBase, table=True):
 
 
 class RecognitionResultCreate(RecognitionResultBase):
-    reference_id: int | None
+    reference_db_id: int | None
 
 
 class RecognitionResultUpdate(SQLModel):

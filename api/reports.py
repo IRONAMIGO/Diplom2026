@@ -9,8 +9,8 @@ from core.database import get_session
 from core.image_utils import read_image_bytes, reduce_image, write_image
 from core.pipeline import FaceRecognitionPipeline
 from schemas.references import ReferenceFace
-from schemas.reports import RecognitionResultPublic, RecognitionResult, RecognitionDataCreate, RecognitionData, \
-    RecognitionDataPublic
+from schemas.reports import RecognitionResult, RecognitionDataCreate, RecognitionData, \
+    RecognitionDataPublic, RecognitionResultPublicWithStudent
 from schemas.students import Group, Student
 
 pipeline = None
@@ -26,7 +26,7 @@ reports_router = APIRouter(
 )
 
 
-@reports_router.get("/", response_model=list[RecognitionResultPublic])
+@reports_router.get("/", response_model=list[RecognitionResultPublicWithStudent])
 async def read_results(
         *,
         session: Session = Depends(get_session),
@@ -48,7 +48,7 @@ async def read_results(
     return results
 
 
-@reports_router.post("/recognize", response_model=list[RecognitionResultPublic], status_code=status.HTTP_201_CREATED)
+@reports_router.post("/recognize", response_model=list[RecognitionResultPublicWithStudent], status_code=status.HTTP_201_CREATED)
 async def create_results(
         *, session: Session = Depends(get_session),
         data: Annotated[RecognitionDataCreate, Form()],
@@ -94,7 +94,7 @@ async def create_results(
     for result in results:
         db_result = RecognitionResult.model_validate(result)
         student_id = None
-        ref = session.get(ReferenceFace, result.reference_id)
+        ref = session.get(ReferenceFace, result.reference_db_id)
         if ref:
             student_id = ref.student_id
         db_result.student_id = student_id

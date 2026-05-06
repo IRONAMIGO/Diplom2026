@@ -99,9 +99,9 @@ if __name__ == '__main__':
         for result in results:
             student_id = None
             student_name = "Неизвестный"
-            if result.reference_id is not None:
+            if result.reference_db_id is not None:
                 with next(get_session()) as session:
-                    ref = session.get(ReferenceFace, result.reference_id)
+                    ref = session.get(ReferenceFace, result.reference_db_id)
                     if ref:
                         student_id = ref.student_id
                         student_name = ref.student.name
