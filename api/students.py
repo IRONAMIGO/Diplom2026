@@ -19,8 +19,8 @@ async def read_streams(
         *,
         response: Response,
         session: Session = Depends(get_session),
-        offset: int = 0,
-        limit: int = Query(default=10, le=10),
+        offset: Annotated[int | None, Query(ge=0)] = None,
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None
 ):
     # Подсчёт общего количества
     total = session.exec(select(func.count()).select_from(Stream)).one()
@@ -103,9 +103,9 @@ async def read_groups(
         *,
         response: Response,
         session: Session = Depends(get_session),
-        stream_id: Annotated[int | None, Query()] = None,
-        offset: int = 0,
-        limit: int = Query(default=10, le=10),
+        stream_id: Annotated[int | None, Query(ge=0)] = None,
+        offset: Annotated[int | None, Query(ge=0)] = None,
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None
 ):
 
     # Формируем базовый запрос
@@ -195,8 +195,8 @@ async def read_students(
         response: Response,
         session: Session = Depends(get_session),
         group_id: Annotated[int | None, Query()] = None,
-        offset: Annotated[int, Query(ge=0)] = 0,
-        limit: Annotated[int, Query(le=20)] = 20
+        offset: Annotated[int | None, Query(ge=0)] = None,
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None
 ):
     # Базовый запрос с фильтром
     base_stmt = select(Student)
