@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import SQLModel, Field, Relationship
 
+from .students import StudentPublic
 if TYPE_CHECKING:
-    from .students import Student, StudentPublic
+    from .students import Student
 
 
 class RecognitionDataBase(SQLModel):
@@ -66,4 +67,4 @@ class RecognitionResultPublic(RecognitionResultBase):
 
 
 class RecognitionResultPublicWithStudent(RecognitionResultPublic):
-    student: Optional["StudentPublic"]
+    student: Optional["StudentPublic"] = None
