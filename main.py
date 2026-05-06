@@ -32,6 +32,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],  # Разрешенные методы
     allow_headers=["*"],  # Разрешенные заголовки
+    expose_headers=["X-Total-Count"],
 )
 
 app.include_router(streams_router)
