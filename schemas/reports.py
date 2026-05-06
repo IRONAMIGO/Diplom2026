@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
-    from .students import Student
+    from .students import Student, StudentPublic
 
 
 class RecognitionDataBase(SQLModel):
