@@ -32,8 +32,8 @@ async def read_references(
         *,
         session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для получения фотографий")],
-        offset: Annotated[int, Query(ge=0)] = 0,
-        limit: Annotated[int, Query(le=20)] = 20
+        offset: Annotated[int | None, Query(ge=0)] = None,
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None
 ):
     references = session.exec(
         select(ReferenceFace).where(ReferenceFace.student_id == student_id).offset(offset).limit(limit)

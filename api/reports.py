@@ -33,8 +33,8 @@ async def read_results(
         stream_id: Annotated[int | None, Query()] = None,
         group_id: Annotated[int | None, Query()] = None,
         student_id: Annotated[int | None, Query()] = None,
-        offset: Annotated[int, Query(ge=0)] = 0,
-        limit: Annotated[int, Query(le=20)] = 20
+        offset: Annotated[int | None, Query(ge=0)] = None,
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None
 ):
     statement = select(RecognitionResult)
     if student_id:
