@@ -49,7 +49,7 @@ class RecognitionResult(RecognitionResultBase, table=True):
                                    ondelete="SET NULL")  # None если не распознан
 
     data: "RecognitionData" = Relationship(back_populates="results")
-    student: "Student" = Relationship(back_populates="results")
+    student: Optional["Student"] = Relationship(back_populates="results")
 
 
 class RecognitionResultCreate(RecognitionResultBase):
@@ -66,5 +66,5 @@ class RecognitionResultPublic(RecognitionResultBase):
     student_id: int | None
 
 
-class RecognitionResultPublicWithStudents(RecognitionResultPublic):
-    students: list["Student"]
+class RecognitionResultPublicWithStudent(RecognitionResultPublic):
+    student: Optional["StudentPublic"]

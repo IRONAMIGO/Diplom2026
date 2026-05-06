@@ -17,7 +17,7 @@ class Stream(StreamBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     groups: list["Group"] = Relationship(back_populates="stream", cascade_delete=True)
-    user: Optional["User"] = Relationship(back_populates="stream")
+    users: list["User"] = Relationship(back_populates="stream")
 
 
 class StreamCreate(StreamBase):
@@ -44,7 +44,7 @@ class Group(GroupBase, table=True):
 
     stream: "Stream" = Relationship(back_populates="groups")
     students: list["Student"] = Relationship(back_populates="group", cascade_delete=True)
-    user: Optional["User"] = Relationship(back_populates='group')
+    users: list["User"] = Relationship(back_populates='group')
 
 
 class GroupCreate(GroupBase):
@@ -62,6 +62,10 @@ class GroupPublic(GroupBase):
 
 class GroupPublicWithStudents(GroupPublic):
     students: list["StudentPublic"]
+
+
+class GroupPublicWithStream(GroupPublic):
+    stream: "StreamPublic"
 # </editor-fold>
 
 
@@ -79,7 +83,7 @@ class Student(StudentBase, table=True):
     group: "Group" = Relationship(back_populates="students")
     references: list["ReferenceFace"] = Relationship(back_populates="student", cascade_delete=True)
     results: list["RecognitionResult"] = Relationship(back_populates="student")
-    user: Optional["User"] = Relationship(back_populates="student")
+    users: list["User"] = Relationship(back_populates="student")
 
 
 class StudentCreate(StudentBase):
@@ -99,6 +103,10 @@ class StudentPublic(StudentBase):
 
 class StudentPublicWithGroup(StudentPublic):
     group: GroupPublic
+
+
+class StudentPublicWithGroupAndStream(StudentPublicWithGroup):
+    results: "GroupPublicWithStream"
 
 
 class StudentPublicWithGroupAndReferences(StudentPublicWithGroup):

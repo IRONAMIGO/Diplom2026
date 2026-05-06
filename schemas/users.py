@@ -19,9 +19,9 @@ class User(UserBase, table=True):
     hashed_password: str = Field()
 
     role: "Role" = Relationship(back_populates="users")
-    student: Optional["Student"] = Relationship(back_populates="user")
-    group: Optional["Group"] = Relationship(back_populates="user")
-    stream: Optional["Stream"] = Relationship(back_populates="user")
+    student: Optional["Student"] = Relationship(back_populates="users")
+    group: Optional["Group"] = Relationship(back_populates="users")
+    stream: Optional["Stream"] = Relationship(back_populates="users")
 
 
 class UserCreate(UserBase):
