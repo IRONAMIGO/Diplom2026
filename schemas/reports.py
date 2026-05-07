@@ -34,6 +34,10 @@ class RecognitionDataPublic(RecognitionDataBase):
     image_path: str
 
 
+class RecognitionDataPublicWithRecognitionResultAndStudent(RecognitionDataPublic):
+    results: list["RecognitionResultPublicWithStudent"]
+
+
 class RecognitionResultBase(SQLModel):
     student_id: int | None = Field(default=None, index=True, foreign_key="student.id",
                                    ondelete="SET NULL")  # None если не распознан

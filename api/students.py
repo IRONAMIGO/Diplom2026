@@ -25,8 +25,12 @@ async def read_streams(
     # Подсчёт общего количества
     total = session.exec(select(func.count()).select_from(Stream)).one()
     response.headers["X-Total-Count"] = str(total)
-
-    streams = session.exec(select(Stream).offset(offset).limit(limit)).all()
+    base_stmt = select(Stream)
+    if offset:
+        base_stmt = base_stmt.offset(offset)
+    if limit:
+        base_stmt = base_stmt.limit(limit)
+    streams = session.exec(base_stmt).all()
     return streams
 
 
@@ -117,7 +121,11 @@ async def read_groups(
         count_stmt = count_stmt.where(Group.stream_id == stream_id)
     total = session.exec(count_stmt).one()
     response.headers["X-Total-Count"] = str(total)
-    groups = session.exec(base_stmt.offset(offset).limit(limit)).all()
+    if offset:
+        base_stmt = base_stmt.offset(offset)
+    if limit:
+        base_stmt = base_stmt.limit(limit)
+    groups = session.exec(base_stmt).all()
     return groups
 
 
@@ -207,7 +215,11 @@ async def read_students(
         count_stmt = count_stmt.where(Student.group_id == group_id)
     total = session.exec(count_stmt).one()
     response.headers["X-Total-Count"] = str(total)
-    students = session.exec(base_stmt.offset(offset).limit(limit)).all()
+    if offset:
+        base_stmt = base_stmt.offset(offset)
+    if limit:
+        base_stmt = base_stmt.limit(limit)
+    students = session.exec(base_stmt).all()
     return students
 
 

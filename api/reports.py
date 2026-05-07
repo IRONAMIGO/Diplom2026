@@ -1,16 +1,17 @@
 import uuid
+from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException
-from sqlmodel import Session, select, col
+from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException, Response
+from sqlmodel import Session, select, col, func
 
-from core.config import REPORT_DIR, REPORT_MAX_SIZE
+from core.config import REPORT_DIR, REPORT_MAX_SIZE, BASE_DIR
 from core.database import get_session
 from core.image_utils import read_image_bytes, reduce_image, write_image
 from core.pipeline import FaceRecognitionPipeline
 from schemas.references import ReferenceFace
 from schemas.reports import RecognitionResult, RecognitionDataCreate, RecognitionData, \
-    RecognitionDataPublic, RecognitionResultPublicWithStudent
+    RecognitionDataPublic, RecognitionDataPublicWithRecognitionResultAndStudent
 from schemas.students import Group, Student
 
 pipeline = None
@@ -26,29 +27,50 @@ reports_router = APIRouter(
 )
 
 
-@reports_router.get("/", response_model=list[RecognitionResultPublicWithStudent])
+@reports_router.get("/", response_model=list[RecognitionDataPublicWithRecognitionResultAndStudent])
 async def read_results(
         *,
+        response: Response,
         session: Session = Depends(get_session),
+        lecture_date: Annotated[date | None, Query()] = None,
+        lecture_num: Annotated[int | None, Query()] = None,
         stream_id: Annotated[int | None, Query()] = None,
         group_id: Annotated[int | None, Query()] = None,
         student_id: Annotated[int | None, Query()] = None,
         offset: Annotated[int | None, Query(ge=0)] = None,
         limit: Annotated[int | None, Query(gt=0, le=25)] = None
 ):
-    statement = select(RecognitionResult)
+    # Базовый запрос с фильтром
+    base_stmt = select(RecognitionData)
+    # Подсчёт количества
+    count_stmt = select(func.count()).select_from(RecognitionData)
+    if lecture_date:
+        base_stmt = base_stmt.where(RecognitionData.lecture_date == lecture_date)
+        count_stmt = count_stmt.where(RecognitionData.lecture_date == lecture_date)
+    if lecture_num:
+        base_stmt = base_stmt.where(RecognitionData.lecture_num == lecture_num)
+        count_stmt = count_stmt.where(RecognitionData.lecture_num == lecture_num)
     if student_id:
-        statement = statement.where(RecognitionResult.student_id == student_id)
+        base_stmt = base_stmt.join(RecognitionResult).where(RecognitionResult.student_id == student_id)
+        count_stmt = count_stmt.join(RecognitionResult).where(RecognitionResult.student_id == student_id)
     elif group_id:
-        statement = statement.join(Student).where(Student.group_id == group_id)
+        base_stmt = base_stmt.join(RecognitionResult).join(Student).where(Student.group_id == group_id)
+        count_stmt = count_stmt.join(RecognitionResult).join(Student).where(Student.group_id == group_id)
     elif stream_id:
-        statement = statement.join(Student).join(Group).where(Group.stream_id == stream_id)
-    statement = statement.order_by(col(RecognitionResult.data_id).desc()).offset(offset).limit(limit)
-    results = session.exec(statement).all()
+        base_stmt = base_stmt.join(RecognitionResult).join(Student).join(Group).where(Group.stream_id == stream_id)
+        count_stmt = count_stmt.join(RecognitionResult).join(Student).join(Group).where(Group.stream_id == stream_id)
+    total = session.exec(count_stmt).one()
+    response.headers["X-Total-Count"] = str(total)
+    if offset:
+        base_stmt = base_stmt.offset(offset)
+    if limit:
+        base_stmt = base_stmt.limit(limit)
+    results = session.exec(base_stmt).all()
     return results
 
 
-@reports_router.post("/recognize", response_model=list[RecognitionResultPublicWithStudent], status_code=status.HTTP_201_CREATED)
+@reports_router.post("/recognize", response_model=RecognitionDataPublicWithRecognitionResultAndStudent,
+                     status_code=status.HTTP_201_CREATED)
 async def create_results(
         *, session: Session = Depends(get_session),
         data: Annotated[RecognitionDataCreate, Form()],
@@ -71,6 +93,9 @@ async def create_results(
     # Убедимся, что директория существует
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Относительный путь от BASE_DIR (для хранения в БД)
+    file_db_path = "/" + str(file_path.relative_to(BASE_DIR)).replace("\\","/")
+
     # Загружаем изображение
     img = read_image_bytes(await photo.read())
     # Уменьшенное изображение для сохранения
@@ -80,7 +105,7 @@ async def create_results(
 
     # Сохраняем данные в БД
     data = RecognitionDataCreate.model_validate(data)
-    db_data = RecognitionData(lecture_date=data.lecture_date, lecture_num=data.lecture_num, image_path=file_path)
+    db_data = RecognitionData(lecture_date=data.lecture_date, lecture_num=data.lecture_num, image_path=file_db_path)
     session.add(db_data)
     session.commit()
     session.refresh(db_data)
@@ -102,4 +127,6 @@ async def create_results(
         session.commit()
         session.refresh(db_result)
         db_results.append(db_result)
-    return db_results
+    session.refresh(db_data)
+    db_data = RecognitionDataPublicWithRecognitionResultAndStudent.model_validate(db_data)
+    return db_data
