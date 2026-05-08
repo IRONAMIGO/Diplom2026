@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException, Response
+from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException, Response, File
 from sqlmodel import Session, select, col, func
 
 from core.config import REPORT_DIR, REPORT_MAX_SIZE, BASE_DIR
@@ -59,6 +59,8 @@ async def read_results(
     elif stream_id:
         base_stmt = base_stmt.join(RecognitionResult).join(Student).join(Group).where(Group.stream_id == stream_id)
         count_stmt = count_stmt.join(RecognitionResult).join(Student).join(Group).where(Group.stream_id == stream_id)
+    base_stmt = base_stmt.group_by(RecognitionData.id)
+    # count_stmt = count_stmt.group_by(RecognitionData.id)
     total = session.exec(count_stmt).one()
     response.headers["X-Total-Count"] = str(total)
     if offset:
@@ -73,8 +75,8 @@ async def read_results(
                      status_code=status.HTTP_201_CREATED)
 async def create_results(
         *, session: Session = Depends(get_session),
-        data: Annotated[RecognitionDataCreate, Form()],
-        photo: UploadFile,
+        data: Annotated[RecognitionDataCreate | str, Form()],
+        photo: Annotated[UploadFile, File()],
         pipe: FaceRecognitionPipeline = Depends(get_pipeline)
 ):
     """
@@ -104,8 +106,14 @@ async def create_results(
     write_image(file_path, img_small)
 
     # Сохраняем данные в БД
-    data = RecognitionDataCreate.model_validate(data)
-    db_data = RecognitionData(lecture_date=data.lecture_date, lecture_num=data.lecture_num, image_path=file_db_path)
+    if type(data) is str:
+        # Парсим JSON-строку в объект RecognitionDataCreate
+        parsed_data = RecognitionDataCreate.model_validate_json(data)
+        db_data = RecognitionData(lecture_date=parsed_data.lecture_date, lecture_num=parsed_data.lecture_num,
+                                  image_path=file_db_path)
+    else:
+        data = RecognitionDataCreate.model_validate(data)
+        db_data = RecognitionData(lecture_date=data.lecture_date, lecture_num=data.lecture_num, image_path=file_db_path)
     session.add(db_data)
     session.commit()
     session.refresh(db_data)
