@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException, Response, File
+from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException, Response, File, Path
 from sqlmodel import Session, select, col, func
 
 from core.config import REPORT_DIR, REPORT_MAX_SIZE, BASE_DIR
@@ -11,7 +11,8 @@ from core.image_utils import read_image_bytes, reduce_image, write_image
 from core.pipeline import FaceRecognitionPipeline
 from schemas.references import ReferenceFace
 from schemas.reports import RecognitionResult, RecognitionDataCreate, RecognitionData, \
-    RecognitionDataPublic, RecognitionDataPublicWithRecognitionResultAndStudent
+    RecognitionDataPublic, RecognitionDataPublicWithRecognitionResultAndStudent, RecognitionResultPublicWithStudent, \
+    RecognitionResultUpdate
 from schemas.students import Group, Student
 
 pipeline = None
@@ -43,7 +44,7 @@ async def read_results(
     # Базовый запрос с фильтром
     base_stmt = select(RecognitionData)
     # Подсчёт количества
-    count_stmt = select(func.count()).select_from(RecognitionData)
+    count_stmt = select(func.count(func.distinct(RecognitionData.id))).select_from(RecognitionData)
     if lecture_date:
         base_stmt = base_stmt.where(RecognitionData.lecture_date == lecture_date)
         count_stmt = count_stmt.where(RecognitionData.lecture_date == lecture_date)
@@ -71,9 +72,9 @@ async def read_results(
     return results
 
 
-@reports_router.post("/recognize", response_model=RecognitionDataPublicWithRecognitionResultAndStudent,
+@reports_router.post("/", response_model=RecognitionDataPublicWithRecognitionResultAndStudent,
                      status_code=status.HTTP_201_CREATED)
-async def create_results(
+async def create_result(
         *, session: Session = Depends(get_session),
         data: Annotated[RecognitionDataCreate | str, Form()],
         photo: Annotated[UploadFile, File()],
@@ -122,7 +123,10 @@ async def create_results(
     # Определяем присутствующих на фото
     results = pipe.recognize_group_image(db_data.id, img, scale)
     if not results:
-        raise ValueError("На изображении не найдено лиц")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="На изображении не найдено лиц"
+        )
     db_results = []
     for result in results:
         db_result = RecognitionResult.model_validate(result)
@@ -138,3 +142,33 @@ async def create_results(
     session.refresh(db_data)
     db_data = RecognitionDataPublicWithRecognitionResultAndStudent.model_validate(db_data)
     return db_data
+
+
+@reports_router.get("/{data_id}",
+                     response_model=RecognitionDataPublicWithRecognitionResultAndStudent, )
+async def read_report(
+        *, session: Session = Depends(get_session),
+        data_id: Annotated[int, Path(title="ID отчета для получения")]
+):
+    recognition_data = session.get(RecognitionData, data_id)
+    if not recognition_data:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return recognition_data
+
+
+@reports_router.put("/results/{result_id}", response_model=RecognitionResultPublicWithStudent)
+async def update_result(
+        *, session: Session = Depends(get_session),
+        result_id: Annotated[int, Path(title="ID результата для изменения")],
+        result: Annotated[RecognitionResultUpdate, Form()]
+):
+    db_result = session.get(RecognitionResult, result_id)
+    if not db_result:
+        raise HTTPException(status_code=404, detail="Result not found")
+    result_update_data = result.model_dump(exclude_unset=True)
+    result_update_data["similarity"] = None
+    db_result.sqlmodel_update(result_update_data)
+    session.add(db_result)
+    session.commit()
+    session.refresh(db_result)
+    return db_result
