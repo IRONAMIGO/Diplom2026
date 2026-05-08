@@ -72,7 +72,7 @@ async def read_results(
     return results
 
 
-@reports_router.post("/", response_model=RecognitionDataPublicWithRecognitionResultAndStudent,
+@reports_router.post("/", response_model=RecognitionDataPublic,
                      status_code=status.HTTP_201_CREATED)
 async def create_result(
         *, session: Session = Depends(get_session),
@@ -131,16 +131,15 @@ async def create_result(
     for result in results:
         db_result = RecognitionResult.model_validate(result)
         student_id = None
-        ref = session.get(ReferenceFace, result.reference_db_id)
-        if ref:
-            student_id = ref.student_id
+        if result.reference_db_id is not None:
+            ref = session.get(ReferenceFace, result.reference_db_id)
+            if ref:
+                student_id = ref.student_id
         db_result.student_id = student_id
         session.add(db_result)
         session.commit()
         session.refresh(db_result)
         db_results.append(db_result)
-    session.refresh(db_data)
-    db_data = RecognitionDataPublicWithRecognitionResultAndStudent.model_validate(db_data)
     return db_data
 
 
