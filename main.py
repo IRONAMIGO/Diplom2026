@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from api.references import references_router
 from api.reports import reports_router
 from api.students import students_router, groups_router, streams_router
+from api.users import token_router, users_router
 from core.config import CORS_URL
 from core.database import init_db
 from core.pipeline import FaceRecognitionPipeline
@@ -41,5 +42,7 @@ app.include_router(groups_router)
 app.include_router(students_router)
 app.include_router(references_router)
 app.include_router(reports_router)
+app.include_router(token_router)
+app.include_router(users_router)
 
 app.mount("/data", StaticFiles(directory="data"), name="data")

@@ -33,3 +33,8 @@ FAISS_ID_MAP_PATH = Path(os.getenv("FAISS_ID_MAP_PATH", BASE_DIR / "data/faiss_i
 
 # Параметры распознавания
 RECOGNITION_THRESHOLD = float(os.getenv("RECOGNITION_THRESHOLD", "0.6"))
+
+# Хэширование
+SECRET_KEY = "eb0ea17d9e0aa17b07f21ca219c17d204445f2bc33a7f8c8949d0745b81eab54"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 1500

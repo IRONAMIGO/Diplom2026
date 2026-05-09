@@ -6,3 +6,5 @@ insightface
 uvicorn
 python-multipart
 onnxruntime
+pyjwt
+pwdlib[argon2]
