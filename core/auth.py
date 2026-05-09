@@ -44,6 +44,7 @@ def authenticate_user(username: str, password: str) -> UserPublicWithRole | None
         return None
     with next(get_session()) as session:
         user_with_role: UserPublicWithRole = session.get(User, user.id)
+        _ = user_with_role.role.name
     return user_with_role
 
 

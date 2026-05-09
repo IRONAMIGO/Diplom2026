@@ -7,7 +7,8 @@ from core.database import get_session
 from core.auth import get_current_user
 from schemas.users import User
 from schemas.students import StudentUpdate, StudentPublic, Student, StudentCreate, GroupPublic, Group, GroupCreate, \
-    GroupUpdate, Stream, StreamUpdate, StreamPublic, StreamCreate, StudentPublicWithGroup, GroupPublicWithStream
+    GroupUpdate, Stream, StreamUpdate, StreamPublic, StreamCreate, StudentPublicWithGroup, GroupPublicWithStream, \
+    StudentPrivate
 
 # <editor-fold desc="streams_router">
 streams_router = APIRouter(
@@ -238,7 +239,7 @@ async def create_student(
     session.refresh(db_student)
     return db_student
 
-@students_router.get("/{student_id}", response_model=StudentPublic)
+@students_router.get("/{student_id}", response_model=StudentPrivate)
 async def read_student(
         *, session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для получения")],
@@ -249,7 +250,7 @@ async def read_student(
         raise HTTPException(status_code=404, detail="Student not found")
     return student
 
-@students_router.put("/{student_id}", response_model=StudentPublic)
+@students_router.put("/{student_id}", response_model=StudentPrivate)
 async def update_student(
         *, session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для изменения")],

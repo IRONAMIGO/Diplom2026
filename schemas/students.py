@@ -73,12 +73,12 @@ class GroupPublicWithStream(GroupPublic):
 class StudentBase(SQLModel):
     name: str = Field(index=True)
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
-    phone_number: str | None = Field(default=None)
-    email: str | None = Field(default=None)
 
 
 class Student(StudentBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
+    phone_number: str | None = Field(default=None)
+    email: str | None = Field(default=None)
 
     group: "Group" = Relationship(back_populates="students")
     references: list["ReferenceFace"] = Relationship(back_populates="student", cascade_delete=True)
@@ -87,7 +87,8 @@ class Student(StudentBase, table=True):
 
 
 class StudentCreate(StudentBase):
-    pass
+    phone_number: str | None = None
+    email: str | None = None
 
 
 class StudentUpdate(SQLModel):
@@ -99,6 +100,12 @@ class StudentUpdate(SQLModel):
 
 class StudentPublic(StudentBase):
     id: int
+
+
+class StudentPrivate(StudentBase):
+    id: int
+    phone_number: str | None
+    email: str | None
 
 
 class StudentPublicWithGroup(StudentPublic):
