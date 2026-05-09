@@ -2,13 +2,15 @@ import os
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status, UploadFile, HTTPException, Path
+from fastapi import APIRouter, Depends, Query, status, UploadFile, HTTPException, Path, Security
 from sqlmodel import Session, select
 
 from core.config import PHOTO_DIR, PHOTO_MAX_SIZE, FAISS_INDEX_PATH, BASE_DIR
 from core.database import get_session
 from core.image_utils import crop_face, read_image_bytes, write_image, reduce_image
 from core.pipeline import FaceRecognitionPipeline
+from core.auth import get_current_user
+from schemas.users import User
 from schemas.references import ReferenceFacePublic, ReferenceFace
 
 pipeline = None
@@ -29,11 +31,11 @@ references_router = APIRouter(
 
 @references_router.get("/{student_id}/photos/", response_model=list[ReferenceFacePublic])
 async def read_references(
-        *,
-        session: Session = Depends(get_session),
+        *, session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для получения фотографий")],
         offset: Annotated[int | None, Query(ge=0)] = None,
-        limit: Annotated[int | None, Query(gt=0, le=25)] = None
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None,
+        current_user: User = Security(get_current_user, scopes=[])  # аутентификация
 ):
     references = session.exec(
         select(ReferenceFace).where(ReferenceFace.student_id == student_id).offset(offset).limit(limit)
@@ -47,7 +49,8 @@ async def create_reference(
         *, session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для добавления фотографии")],
         photo: UploadFile,
-        pipe: FaceRecognitionPipeline = Depends(get_pipeline)
+        pipe: FaceRecognitionPipeline = Depends(get_pipeline),
+        current_user: User = Security(get_current_user, scopes=["teacher", "admin"])  # teacher или admin
 ):
     """
     Создать фото студента:
@@ -96,20 +99,20 @@ async def create_reference(
     session.add(db_reference)
     session.commit()
     session.refresh(db_reference)
+
     # Добавляем в Faiss индекс
     pipe.index.add(db_reference.id, embedding)
     pipe.index.save(str(FAISS_INDEX_PATH))
     return db_reference
 
 
-@references_router.get("/{student_id}/photos/{photo_id}",
-                       response_model=ReferenceFacePublic, )
+@references_router.get("/{student_id}/photos/{photo_id}", response_model=ReferenceFacePublic)
 async def read_reference(
         *, session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для получения фотографии")],
-        photo_id: Annotated[int, Path(title="ID фотографии для получения")]
+        photo_id: Annotated[int, Path(title="ID фотографии для получения")],
+        current_user: User = Security(get_current_user, scopes=[])
 ):
-    # TODO Проверка прав на действия
     reference = session.get(ReferenceFace, photo_id)
     if not reference:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -120,9 +123,10 @@ async def read_reference(
 async def delete_reference(
         *, session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для удаления фотографии")],
-        photo_id: Annotated[int, Path(title="ID фотографии для удаления")]
+        photo_id: Annotated[int, Path(title="ID фотографии для удаления")],
+        pipe: FaceRecognitionPipeline = Depends(get_pipeline),
+        current_user: User = Security(get_current_user, scopes=["teacher", "admin"])
 ):
-    # TODO Проверить права пользователя на удаление
     reference = session.get(ReferenceFace, photo_id)
     if not reference:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -130,5 +134,7 @@ async def delete_reference(
         os.remove(f'{reference.image_path}')
     session.delete(reference)
     session.commit()
-    # TODO Перестроить faiss индекс
+    # Удаляем в Faiss
+    pipe.index.remove(photo_id)
+    pipe.index.save(str(FAISS_INDEX_PATH))
     return {"ok": True}

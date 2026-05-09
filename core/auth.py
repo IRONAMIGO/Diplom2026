@@ -1,20 +1,22 @@
 from datetime import timedelta, datetime, timezone
-from typing import Annotated, Optional
+from typing import Annotated, List
 
 import jwt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Security
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jwt import InvalidTokenError
 from pwdlib import PasswordHash
 from sqlmodel import select
 
-from core.config import SECRET_KEY, ALGORITHM
+from core.config import SECRET_KEY, ALGORITHM, SCOPES
 from core.database import get_session
-from schemas.users import TokenData, User
+from schemas.users import TokenData, User, UserPublic, UserPublicWithRole
 
 password_hash = PasswordHash.recommended()
 DUMMY_HASH = password_hash.hash("dummypassword")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Схема с поддержкой scopes
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", scopes=SCOPES)
 
 
 def verify_password(plain_password, hashed_password) -> bool:
@@ -33,42 +35,77 @@ def get_user(username: str | None) -> User | None:
     return user
 
 
-def authenticate_user(username: str, password: str) -> User | None:
+def authenticate_user(username: str, password: str) -> UserPublicWithRole | None:
     user = get_user(username)
     if not user:
         verify_password(password, DUMMY_HASH)
         return None
     if not verify_password(password, user.hashed_password):
         return None
-    return user
+    with next(get_session()) as session:
+        user_with_role: UserPublicWithRole = session.get(User, user.id)
+    return user_with_role
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict, expires_delta: timedelta | None = None, scopes: List[str] = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=60)
     to_encode.update({"exp": expire})
+    # Сохраняем scopes как строку через пробел (стандарт JWT scope)
+    if scopes:
+        to_encode["scope"] = " ".join(scopes)
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> User:
+async def get_current_user(
+    security_scopes: SecurityScopes,
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> UserPublic:
+    """
+    Проверяет токен, декодирует, проверяет наличие требуемых scopes.
+    Используется с Security(get_current_user, scopes=["admin", ...]).
+    """
+    if security_scopes.scopes:
+        authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
+    else:
+        authenticate_value = "Bearer"
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        headers={"WWW-Authenticate": authenticate_value},
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
+        username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
+        token_scopes_str = payload.get("scope", "")
+        token_scopes = token_scopes_str.split()
         token_data = TokenData(username=username)
     except InvalidTokenError:
         raise credentials_exception
+
     user = get_user(token_data.username)
     if user is None:
         raise credentials_exception
+
+    # Проверка scope
+    for scope in security_scopes.scopes:
+        if scope not in token_scopes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions",
+                headers={"WWW-Authenticate": authenticate_value},
+            )
     return user
+
+
+# Зависимость для случаев, когда scope не требуются (только аутентификация)
+async def get_current_active_user(
+    current_user: Annotated[User, Security(get_current_user, scopes=[])]  # без требований
+) -> User:
+    return current_user

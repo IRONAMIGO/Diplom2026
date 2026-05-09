@@ -51,6 +51,10 @@ class UserPublic(UserBase):
     id: int
 
 
+class UserPublicWithRole(UserPublic):
+    role: "Role"
+
+
 class RoleBase(SQLModel):
     name: str = Field(index=True)
 

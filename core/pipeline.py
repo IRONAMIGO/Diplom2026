@@ -113,17 +113,17 @@ class FaissIndex:
     def add(self, db_id: int, embedding: np.ndarray) -> None:
         if db_id in self.id_to_index:
             # Обновление существующего? В данной реализации удалим и добавим заново
-            self.remove([db_id])
+            self.remove(db_id)
         pos = self.next_position
         self.index.add(embedding.reshape(1, -1))
         self.id_to_index[db_id] = pos
         self.index_to_id[pos] = db_id
         self.next_position += 1
 
-    def remove(self, ids: List[int]) -> None:
+    def remove(self, id_from_db: int) -> None:
         # Faiss не поддерживает удаление напрямую в простом индексе.
         # Перестроим индекс.
-        keep_ids = [db_id for db_id in self.id_to_index.keys() if db_id not in ids]
+        keep_ids = [db_id for db_id in self.id_to_index.keys() if db_id != id_from_db]
         if not keep_ids:
             self.index.reset()
             self.id_to_index.clear()

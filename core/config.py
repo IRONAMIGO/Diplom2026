@@ -38,3 +38,10 @@ RECOGNITION_THRESHOLD = float(os.getenv("RECOGNITION_THRESHOLD", "0.6"))
 SECRET_KEY = "eb0ea17d9e0aa17b07f21ca219c17d204445f2bc33a7f8c8949d0745b81eab54"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1500
+
+# Определяем доступные scope
+SCOPES = {
+    "admin": "Полный доступ к системе",
+    "teacher": "Доступ преподавателя (управление эталонами, отчётами)",
+    "student": "Доступ студента (просмотр своих данных)",
+}

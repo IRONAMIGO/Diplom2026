@@ -53,7 +53,7 @@ class GroupCreate(GroupBase):
 
 class GroupUpdate(SQLModel):
     name: str | None = None
-    stream: int | None = None
+    stream_id: int | None = None
 
 
 class GroupPublic(GroupBase):

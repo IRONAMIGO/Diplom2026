@@ -1,9 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Depends, Query, status, Form, Path, Response
+from fastapi import APIRouter, HTTPException, Depends, Query, status, Form, Path, Response, Security
 from sqlmodel import Session, select, func
 
 from core.database import get_session
+from core.auth import get_current_user
+from schemas.users import User
 from schemas.students import StudentUpdate, StudentPublic, Student, StudentCreate, GroupPublic, Group, GroupCreate, \
     GroupUpdate, Stream, StreamUpdate, StreamPublic, StreamCreate, StudentPublicWithGroup, GroupPublicWithStream
 
@@ -13,14 +15,14 @@ streams_router = APIRouter(
     tags=["streams"],
 )
 
-
 @streams_router.get("/", response_model=list[StreamPublic])
 async def read_streams(
         *,
         response: Response,
         session: Session = Depends(get_session),
         offset: Annotated[int | None, Query(ge=0)] = None,
-        limit: Annotated[int | None, Query(gt=0, le=25)] = None
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None,
+        current_user: User = Security(get_current_user, scopes=[])
 ):
     # Подсчёт общего количества
     total = session.exec(select(func.count()).select_from(Stream)).one()
@@ -33,11 +35,11 @@ async def read_streams(
     streams = session.exec(base_stmt).all()
     return streams
 
-
 @streams_router.post("/", response_model=StreamPublic, status_code=status.HTTP_201_CREATED)
 async def create_stream(
         *, session: Session = Depends(get_session),
-        stream: Annotated[StreamCreate, Form()]
+        stream: Annotated[StreamCreate, Form()],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     """
     Создать группу:
@@ -50,24 +52,23 @@ async def create_stream(
     session.refresh(db_stream)
     return db_stream
 
-
-@streams_router.get("/{stream_id}",
-                    response_model=StreamPublic, )
+@streams_router.get("/{stream_id}", response_model=StreamPublic)
 async def read_stream(
         *, session: Session = Depends(get_session),
-        stream_id: Annotated[int, Path(title="ID потока для получения")]
+        stream_id: Annotated[int, Path(title="ID потока для получения")],
+        current_user: User = Security(get_current_user, scopes=[])
 ):
     stream = session.get(Stream, stream_id)
     if not stream:
         raise HTTPException(status_code=404, detail="Stream not found")
     return stream
 
-
 @streams_router.put("/{stream_id}", response_model=StreamPublic)
 async def update_stream(
         *, session: Session = Depends(get_session),
         stream_id: Annotated[int, Path(title="ID потока для изменения")],
-        stream: Annotated[StreamUpdate, Form()]
+        stream: Annotated[StreamUpdate, Form()],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     db_stream = session.get(Stream, stream_id)
     if not db_stream:
@@ -79,11 +80,11 @@ async def update_stream(
     session.refresh(db_stream)
     return db_stream
 
-
 @streams_router.delete("/{stream_id}")
 async def delete_stream(
         *, session: Session = Depends(get_session),
-        stream_id: Annotated[int, Path(title="ID потока для удаления")]
+        stream_id: Annotated[int, Path(title="ID потока для удаления")],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     stream = session.get(Stream, stream_id)
     if not stream:
@@ -101,7 +102,6 @@ groups_router = APIRouter(
     tags=["groups"],
 )
 
-
 @groups_router.get("/", response_model=list[GroupPublicWithStream])
 async def read_groups(
         *,
@@ -109,9 +109,9 @@ async def read_groups(
         session: Session = Depends(get_session),
         stream_id: Annotated[int | None, Query(ge=0)] = None,
         offset: Annotated[int | None, Query(ge=0)] = None,
-        limit: Annotated[int | None, Query(gt=0, le=25)] = None
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None,
+        current_user: User = Security(get_current_user, scopes=[])
 ):
-
     # Формируем базовый запрос
     base_stmt = select(Group)
     # Подсчёт количества
@@ -128,11 +128,11 @@ async def read_groups(
     groups = session.exec(base_stmt).all()
     return groups
 
-
 @groups_router.post("/", response_model=GroupPublicWithStream, status_code=status.HTTP_201_CREATED)
 async def create_group(
         *, session: Session = Depends(get_session),
-        group: Annotated[GroupCreate, Form()]
+        group: Annotated[GroupCreate, Form()],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     """
     Создать группу:
@@ -145,24 +145,23 @@ async def create_group(
     session.refresh(db_group)
     return db_group
 
-
-@groups_router.get("/{group_id}",
-                   response_model=GroupPublicWithStream, )
+@groups_router.get("/{group_id}", response_model=GroupPublicWithStream)
 async def read_group(
         *, session: Session = Depends(get_session),
-        group_id: Annotated[int, Path(title="ID группы для получения")]
+        group_id: Annotated[int, Path(title="ID группы для получения")],
+        current_user: User = Security(get_current_user, scopes=[])
 ):
     group = session.get(Group, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     return group
 
-
 @groups_router.put("/{group_id}", response_model=GroupPublicWithStream)
 async def update_group(
         *, session: Session = Depends(get_session),
         group_id: Annotated[int, Path(title="ID группы для изменения")],
-        group: Annotated[GroupUpdate, Form()]
+        group: Annotated[GroupUpdate, Form()],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     db_group = session.get(Group, group_id)
     if not db_group:
@@ -174,11 +173,11 @@ async def update_group(
     session.refresh(db_group)
     return db_group
 
-
 @groups_router.delete("/{group_id}")
 async def delete_group(
         *, session: Session = Depends(get_session),
-        group_id: Annotated[int, Path(title="ID группы для удаления")]
+        group_id: Annotated[int, Path(title="ID группы для удаления")],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     group = session.get(Group, group_id)
     if not group:
@@ -196,7 +195,6 @@ students_router = APIRouter(
     tags=["students"],
 )
 
-
 @students_router.get("/", response_model=list[StudentPublicWithGroup])
 async def read_students(
         *,
@@ -204,11 +202,10 @@ async def read_students(
         session: Session = Depends(get_session),
         group_id: Annotated[int | None, Query()] = None,
         offset: Annotated[int | None, Query(ge=0)] = None,
-        limit: Annotated[int | None, Query(gt=0, le=25)] = None
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None,
+        current_user: User = Security(get_current_user, scopes=[])
 ):
-    # Базовый запрос с фильтром
     base_stmt = select(Student)
-    # Подсчёт количества
     count_stmt = select(func.count()).select_from(Student)
     if group_id:
         base_stmt = base_stmt.where(Student.group_id == group_id)
@@ -222,11 +219,11 @@ async def read_students(
     students = session.exec(base_stmt).all()
     return students
 
-
 @students_router.post("/", response_model=StudentPublic, status_code=status.HTTP_201_CREATED)
 async def create_student(
         *, session: Session = Depends(get_session),
-        student: Annotated[StudentCreate, Form()]
+        student: Annotated[StudentCreate, Form()],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     """
     Создать студента:
@@ -241,24 +238,23 @@ async def create_student(
     session.refresh(db_student)
     return db_student
 
-
-@students_router.get("/{student_id}",
-                     response_model=StudentPublic, )
+@students_router.get("/{student_id}", response_model=StudentPublic)
 async def read_student(
         *, session: Session = Depends(get_session),
-        student_id: Annotated[int, Path(title="ID студента для получения")]
+        student_id: Annotated[int, Path(title="ID студента для получения")],
+        current_user: User = Security(get_current_user, scopes=[])
 ):
     student = session.get(Student, student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     return student
 
-
 @students_router.put("/{student_id}", response_model=StudentPublic)
 async def update_student(
         *, session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для изменения")],
-        student: Annotated[StudentUpdate, Form()]
+        student: Annotated[StudentUpdate, Form()],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     db_student = session.get(Student, student_id)
     if not db_student:
@@ -270,11 +266,11 @@ async def update_student(
     session.refresh(db_student)
     return db_student
 
-
 @students_router.delete("/{student_id}")
 async def delete_student(
         *, session: Session = Depends(get_session),
-        student_id: Annotated[int, Path(title="ID студента для удаления")]
+        student_id: Annotated[int, Path(title="ID студента для удаления")],
+        current_user: User = Security(get_current_user, scopes=["admin"])
 ):
     student = session.get(Student, student_id)
     if not student:

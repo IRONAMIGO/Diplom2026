@@ -2,13 +2,15 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException, Response, File, Path
+from fastapi import APIRouter, Depends, Query, status, Form, UploadFile, HTTPException, Response, File, Path, Security
 from sqlmodel import Session, select, col, func
 
 from core.config import REPORT_DIR, REPORT_MAX_SIZE, BASE_DIR
 from core.database import get_session
 from core.image_utils import read_image_bytes, reduce_image, write_image
 from core.pipeline import FaceRecognitionPipeline
+from core.auth import get_current_user
+from schemas.users import User
 from schemas.references import ReferenceFace
 from schemas.reports import RecognitionResult, RecognitionDataCreate, RecognitionData, \
     RecognitionDataPublic, RecognitionDataPublicWithRecognitionResultAndStudent, RecognitionResultPublicWithStudent, \
@@ -30,8 +32,7 @@ reports_router = APIRouter(
 
 @reports_router.get("/", response_model=list[RecognitionDataPublicWithRecognitionResultAndStudent])
 async def read_results(
-        *,
-        response: Response,
+        *, response: Response,
         session: Session = Depends(get_session),
         lecture_date: Annotated[date | None, Query()] = None,
         lecture_num: Annotated[int | None, Query()] = None,
@@ -39,9 +40,10 @@ async def read_results(
         group_id: Annotated[int | None, Query()] = None,
         student_id: Annotated[int | None, Query()] = None,
         offset: Annotated[int | None, Query(ge=0)] = None,
-        limit: Annotated[int | None, Query(gt=0, le=25)] = None
+        limit: Annotated[int | None, Query(gt=0, le=25)] = None,
+        current_user: User = Security(get_current_user, scopes=[])  # любой аутентифицированный
 ):
-    # Базовый запрос с фильтром
+    # Базовый запрос
     base_stmt = select(RecognitionData)
     # Подсчёт количества
     count_stmt = select(func.count(func.distinct(RecognitionData.id))).select_from(RecognitionData)
@@ -61,7 +63,6 @@ async def read_results(
         base_stmt = base_stmt.join(RecognitionResult).join(Student).join(Group).where(Group.stream_id == stream_id)
         count_stmt = count_stmt.join(RecognitionResult).join(Student).join(Group).where(Group.stream_id == stream_id)
     base_stmt = base_stmt.group_by(RecognitionData.id)
-    # count_stmt = count_stmt.group_by(RecognitionData.id)
     total = session.exec(count_stmt).one()
     response.headers["X-Total-Count"] = str(total)
     if offset:
@@ -78,7 +79,8 @@ async def create_result(
         *, session: Session = Depends(get_session),
         data: Annotated[RecognitionDataCreate | str, Form()],
         photo: Annotated[UploadFile, File()],
-        pipe: FaceRecognitionPipeline = Depends(get_pipeline)
+        pipe: FaceRecognitionPipeline = Depends(get_pipeline),
+        current_user: User = Security(get_current_user, scopes=["teacher", "admin"])  # teacher или admin
 ):
     """
     Отправить групповое фото на распознавание:
@@ -143,11 +145,11 @@ async def create_result(
     return db_data
 
 
-@reports_router.get("/{data_id}",
-                     response_model=RecognitionDataPublicWithRecognitionResultAndStudent, )
+@reports_router.get("/{data_id}", response_model=RecognitionDataPublicWithRecognitionResultAndStudent)
 async def read_report(
         *, session: Session = Depends(get_session),
-        data_id: Annotated[int, Path(title="ID отчета для получения")]
+        data_id: Annotated[int, Path(title="ID отчета для получения")],
+        current_user: User = Security(get_current_user, scopes=[])
 ):
     recognition_data = session.get(RecognitionData, data_id)
     if not recognition_data:
@@ -159,7 +161,8 @@ async def read_report(
 async def update_result(
         *, session: Session = Depends(get_session),
         result_id: Annotated[int, Path(title="ID результата для изменения")],
-        result: Annotated[RecognitionResultUpdate, Form()]
+        result: Annotated[RecognitionResultUpdate, Form()],
+        current_user: User = Security(get_current_user, scopes=["teacher", "admin"])  # teacher или admin
 ):
     db_result = session.get(RecognitionResult, result_id)
     if not db_result:
