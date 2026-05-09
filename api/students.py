@@ -5,7 +5,7 @@ from sqlmodel import Session, select, func
 
 from core.database import get_session
 from schemas.students import StudentUpdate, StudentPublic, Student, StudentCreate, GroupPublic, Group, GroupCreate, \
-    GroupUpdate, Stream, StreamUpdate, StreamPublic, StreamCreate, StudentPublicWithGroup
+    GroupUpdate, Stream, StreamUpdate, StreamPublic, StreamCreate, StudentPublicWithGroup, GroupPublicWithStream
 
 # <editor-fold desc="streams_router">
 streams_router = APIRouter(
@@ -102,7 +102,7 @@ groups_router = APIRouter(
 )
 
 
-@groups_router.get("/", response_model=list[GroupPublic])
+@groups_router.get("/", response_model=list[GroupPublicWithStream])
 async def read_groups(
         *,
         response: Response,
@@ -129,7 +129,7 @@ async def read_groups(
     return groups
 
 
-@groups_router.post("/", response_model=GroupPublic, status_code=status.HTTP_201_CREATED)
+@groups_router.post("/", response_model=GroupPublicWithStream, status_code=status.HTTP_201_CREATED)
 async def create_group(
         *, session: Session = Depends(get_session),
         group: Annotated[GroupCreate, Form()]
@@ -147,7 +147,7 @@ async def create_group(
 
 
 @groups_router.get("/{group_id}",
-                   response_model=GroupPublic, )
+                   response_model=GroupPublicWithStream, )
 async def read_group(
         *, session: Session = Depends(get_session),
         group_id: Annotated[int, Path(title="ID группы для получения")]
@@ -158,7 +158,7 @@ async def read_group(
     return group
 
 
-@groups_router.put("/{group_id}", response_model=GroupPublic)
+@groups_router.put("/{group_id}", response_model=GroupPublicWithStream)
 async def update_group(
         *, session: Session = Depends(get_session),
         group_id: Annotated[int, Path(title="ID группы для изменения")],
