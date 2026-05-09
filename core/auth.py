@@ -1,5 +1,5 @@
 from datetime import timedelta, datetime, timezone
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
 import jwt
 from fastapi import Depends, HTTPException, status, Security
@@ -67,46 +67,41 @@ async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
 ) -> UserPublic:
     """
-    Проверяет токен, декодирует, проверяет наличие требуемых scopes.
-    Используется с Security(get_current_user, scopes=["admin", ...]).
+    Проверяет токен и требуемые права (scopes).
+    Для доступа достаточно иметь **любой** из запрошенных scopes.
     """
     if security_scopes.scopes:
         authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
     else:
         authenticate_value = "Bearer"
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": authenticate_value},
     )
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_scopes_str = payload.get("scope", "")
-        token_scopes = token_scopes_str.split()
+        token_scopes = payload.get("scope", "").split()
         token_data = TokenData(username=username)
     except InvalidTokenError:
         raise credentials_exception
 
+    # Проверка прав: нужен хотя бы один scope из запрошенных
+    if security_scopes.scopes and not any(scope in token_scopes for scope in security_scopes.scopes):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+            headers={"WWW-Authenticate": authenticate_value},
+        )
+
+    # Загружаем пользователя
     user = get_user(token_data.username)
     if user is None:
         raise credentials_exception
 
-    # Проверка scope
-    for scope in security_scopes.scopes:
-        if scope not in token_scopes:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions",
-                headers={"WWW-Authenticate": authenticate_value},
-            )
     return user
-
-
-# Зависимость для случаев, когда scope не требуются (только аутентификация)
-async def get_current_active_user(
-    current_user: Annotated[User, Security(get_current_user, scopes=[])]  # без требований
-) -> User:
-    return current_user
