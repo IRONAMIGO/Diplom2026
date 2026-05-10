@@ -112,6 +112,10 @@ class StudentPublicWithGroup(StudentPublic):
     group: GroupPublic
 
 
+class StudentPrivateWithGroup(StudentPrivate):
+    group: GroupPublic
+
+
 class StudentPublicWithGroupAndStream(StudentPublicWithGroup):
     results: "GroupPublicWithStream"
 

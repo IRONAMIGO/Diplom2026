@@ -16,7 +16,7 @@ token_router = APIRouter(
 
 @token_router.post("/")
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+        form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
     """
     При успешной аутентификации возвращает токен, содержащий роль пользователя в качестве scope.
@@ -49,7 +49,7 @@ users_router = APIRouter(
 
 @users_router.get("/me/", response_model=UserPublic)
 async def read_users_me(
-    current_user: Annotated[User, Security(get_current_user, scopes=[])]  # любой аутентифицированный
+        current_user: Annotated[User, Security(get_current_user, scopes=[])]  # любой аутентифицированный
 ) -> UserPublic:
     """Возвращает информацию о текущем пользователе."""
     return current_user
@@ -58,8 +58,7 @@ async def read_users_me(
 # Пример admin-ручки – просмотр всех пользователей
 @users_router.get("/", response_model=List[UserPublic])
 async def read_all_users(
-    current_user: Annotated[User, Security(get_current_user, scopes=["admin"])],
-    # здесь можно добавить пагинацию при необходимости
+        current_user: Annotated[User, Security(get_current_user, scopes=["admin"])],
 ) -> List[UserPublic]:
     """Только для администраторов."""
     from core.database import get_session

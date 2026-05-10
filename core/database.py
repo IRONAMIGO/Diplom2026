@@ -18,10 +18,10 @@ def init_db():
         with engine.connect() as connection:
             connection.execute(text("PRAGMA foreign_keys=ON"))  # for SQLite only
     with next(get_session()) as session:
-        for name in SCOPES.keys():
+        for name, descript in SCOPES.items():
             curr_role = session.exec(select(Role).where(Role.name == name)).one_or_none()
             if curr_role is None:
-                curr_role = Role(name=name)
+                curr_role = Role(name=name, description=descript)
                 session.add(curr_role)
                 session.commit()
                 session.refresh(curr_role)

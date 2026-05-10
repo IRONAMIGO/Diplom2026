@@ -57,6 +57,7 @@ class UserPublicWithRole(UserPublic):
 
 class RoleBase(SQLModel):
     name: str = Field(index=True)
+    description: str = Field()
 
 
 class Role(RoleBase, table=True):
@@ -69,8 +70,9 @@ class RoleCreate(RoleBase):
     pass
 
 
-class RoleUpdate(RoleBase):
-    pass
+class RoleUpdate(SQLModel):
+    name: str | None = None
+    description: str | None = None
 
 
 class RolePublic(RoleBase):
