@@ -243,7 +243,7 @@ async def create_student(
 async def read_student(
         *, session: Session = Depends(get_session),
         student_id: Annotated[int, Path(title="ID студента для получения")],
-        current_user: User = Security(get_current_user, scopes=[])
+        current_user: User = Security(get_current_user, scopes=["teacher", "admin"])
 ):
     student = session.get(Student, student_id)
     if not student:
