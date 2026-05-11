@@ -1,60 +1,66 @@
-# syntax=docker/dockerfile:1
+# ===========================
+# Многоэтапная сборка: builder -> runtime
+# ===========================
 
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/go/dockerfile-reference/
+# --- Этап сборки зависимостей ---
+FROM python:3.12-slim AS builder
 
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
-
-# This Dockerfile uses Python Docker Official Image
-ARG PYTHON_VERSION=3.12
-FROM python:${PYTHON_VERSION}-slim
-
-# Prevents Python from writing pyc files.
-ENV PYTHONDONTWRITEBYTECODE=1
-
-# Keeps Python from buffering stdout and stderr to avoid situations where
-# the application crashes without emitting any logs due to buffering.
-ENV PYTHONUNBUFFERED=1
-
-# Install runtime dependencies + build tools needed by insightface
+# Установка системных пакетов, необходимых для сборки зависимостей
+# (например, gcc для пакетов с C-расширениями, libgl1 для OpenCV)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # runtime OpenCV dependencies
-    libgl1 libglib2.0-0 \
-    # build tools for insightface
-    gcc g++ python3-dev \
+    build-essential \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libfontconfig1 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Создание виртуального окружения и обновление pip
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir --upgrade pip
 
-# Create a non-privileged user that the app will run under.
-# See https://docs.docker.com/go/dockerfile-user-best-practices/
-ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    appuser
-
-# Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
-# Leverage a bind mount to requirements.txt to avoid having to copy them into
-# into this layer.
+# Копируем файл с зависимостями и устанавливаем их
+COPY requirements.txt .
+# RUN pip install --no-cache-dir -r requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
 
-# Switch to the non-privileged user to run the application.
+# --- Финальный образ ---
+FROM python:3.12-slim AS runtime
+
+# Установка только runtime-зависимостей (графические библиотеки для OpenCV/insightface)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libfontconfig1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копируем виртуальное окружение из builder-а
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Создаём непривилегированного пользователя для безопасности
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
+
+# Копируем исходный код приложения
+WORKDIR /app
+COPY --chown=appuser:appuser . /app
+
 USER appuser
 
-# Copy the source code into the container.
-COPY . .
+# Переменные окружения по умолчанию (можно переопределить в compose)
+ENV HOST=0.0.0.0
+ENV PORT=8000
 
-# Expose the port that the application listens on.
+# Для отладки
 EXPOSE 8000
 
-# Run the application.
-CMD ["python3", "-m", "uvicorn", "app:app", "--host=0.0.0.0", "--port=8000"]
+# Запуск одного процесса uvicorn (без workers)
+CMD ["sh", "-c", "uvicorn main:app --host $HOST --port $PORT"]
