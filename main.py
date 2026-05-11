@@ -30,7 +30,12 @@ app = FastAPI(lifespan=lifespan)
 # Разрешаем доступ с определенных доменов
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[CORS_URL, "http://localhost:5173", "http://127.0.0.1:5173", "http://0.0.0.0:8080"],  # Разрешенные источники
+    allow_origins=[CORS_URL,
+                   "http://localhost:5173",
+                   "http://127.0.0.1:5173",
+                   "http://0.0.0.0:8080",
+                   "http://localhost:8080",
+                   ],  # Разрешенные источники
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],  # Разрешенные методы
     allow_headers=["*"],  # Разрешенные заголовки
